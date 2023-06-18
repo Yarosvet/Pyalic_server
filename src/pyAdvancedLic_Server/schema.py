@@ -34,13 +34,14 @@ class ListProducts(BaseModel):
 
 
 class Signature(BaseModel):
+    success: bool = True
+    id: int
+    product_id: int
     license_key: str
     additional_content: str
     comment: str
-
-    installed: Optional[int]
-    activate: Optional[bool]
-    id: Optional[int]
+    installed: int
+    activation_date: str | None
 
 
 class ShortSignature(BaseModel):

@@ -111,3 +111,14 @@ async def list_signatures(payload: schema.SignaturesLimitOffset, session: AsyncS
     for sig in r.scalars():
         sig_list.append(schema.ShortSignature(comment=sig.comment, id=sig.id))
     return schema.ListSignatures(items=len(sig_list), signatures=sig_list, product_id=payload.product_id)
+
+
+@router.get("/interact_signature", response_model=schema.Signature)
+async def get_signature(payload: schema.IdField, session: AsyncSession = Depends(create_session)):
+    r = await session.execute(select(models.Signature).filter_by(id=payload.id))
+    sig = r.scalar_one_or_none()
+    if sig is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Signature not found")
+    return schema.Signature(id=sig.id, license_key=sig.license_key, additional_content=sig.additional_content,
+                            comment=sig.comment, installed=sig.installed, product_id=sig.product_id,
+                            activation_date=sig.activation_date)
