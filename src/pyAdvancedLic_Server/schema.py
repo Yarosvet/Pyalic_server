@@ -19,7 +19,12 @@ class IdField(BaseModel):
 
 
 class Unsuccessful(BaseModel):
-    success: bool = False
+    success = False,
+    error: str | None
+
+
+class Successful(BaseModel):
+    success = True
 
 
 class ListProducts(BaseModel):
