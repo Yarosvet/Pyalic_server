@@ -19,7 +19,7 @@ async def check_access_token(credentials: HTTPAuthorizationCredentials = Depends
 router = APIRouter(dependencies=[Depends(check_access_token)])
 
 
-@router.get("/interact_product", response_model=schema.Product)
+@router.get("/interact_product", response_model=schema.GetProduct)
 async def get_product(payload: schema.IdField, session: AsyncSession = Depends(create_session)):
     r = await session.execute(select(models.Product).filter_by(id=payload.id).options(
         selectinload(models.Product.signatures)))
@@ -27,13 +27,13 @@ async def get_product(payload: schema.IdField, session: AsyncSession = Depends(c
     if p is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
     sig_period = p.sig_period.total_seconds() if p.sig_period is not None else None
-    return schema.Product(success=True, name=p.name, sig_install_limit=p.sig_install_limit,
-                          sig_sessions_limit=p.sig_sessions_limit, sig_period=sig_period,
-                          additional_content=p.additional_content, id=p.id, signatures=len(p.signatures))
+    return schema.GetProduct(name=p.name, sig_install_limit=p.sig_install_limit,
+                             sig_sessions_limit=p.sig_sessions_limit, sig_period=sig_period,
+                             additional_content=p.additional_content, id=p.id, signatures=len(p.signatures))
 
 
-@router.post("/interact_product", response_model=schema.Product)
-async def add_product(payload: schema.Product, session: AsyncSession = Depends(create_session)):
+@router.post("/interact_product", response_model=schema.GetProduct)
+async def add_product(payload: schema.AddProduct, session: AsyncSession = Depends(create_session)):
     r = await session.execute(select(models.Product).filter_by(name=payload.name))
     p = r.scalar_one_or_none()
     if p is not None:
@@ -47,13 +47,13 @@ async def add_product(payload: schema.Product, session: AsyncSession = Depends(c
     await session.commit()
     await session.refresh(p)
     sig_period = p.sig_period.total_seconds() if p.sig_period is not None else None
-    return schema.Product(success=True, name=p.name, sig_install_limit=p.sig_install_limit,
-                          sig_sessions_limit=p.sig_sessions_limit, sig_period=sig_period,
-                          additional_content=p.additional_content, id=p.id, signatures=0)
+    return schema.GetProduct(name=p.name, sig_install_limit=p.sig_install_limit,
+                             sig_sessions_limit=p.sig_sessions_limit, sig_period=sig_period,
+                             additional_content=p.additional_content, id=p.id, signatures=0)
 
 
-@router.put("/interact_product", response_model=schema.Product)
-async def update_product(payload: schema.Product, session: AsyncSession = Depends(create_session)):
+@router.put("/interact_product", response_model=schema.GetProduct)
+async def update_product(payload: schema.UpdateProduct, session: AsyncSession = Depends(create_session)):
     r = await session.execute(select(models.Product).filter_by(id=payload.id).options(
         selectinload(models.Product.signatures)))
     p = r.scalar_one_or_none()
@@ -67,9 +67,9 @@ async def update_product(payload: schema.Product, session: AsyncSession = Depend
     await session.commit()
     await session.refresh(p)
     sig_period = p.sig_period.total_seconds() if p.sig_period is not None else None
-    return schema.Product(success=True, name=p.name, sig_install_limit=p.sig_install_limit,
-                          sig_sessions_limit=p.sig_sessions_limit, sig_period=sig_period,
-                          additional_content=p.additional_content, id=p.id, signatures=len(p.signatures))
+    return schema.GetProduct(name=p.name, sig_install_limit=p.sig_install_limit,
+                             sig_sessions_limit=p.sig_sessions_limit, sig_period=sig_period,
+                             additional_content=p.additional_content, id=p.id, signatures=len(p.signatures))
 
 
 @router.delete("/interact_product", response_model=schema.Successful)
@@ -94,9 +94,9 @@ async def list_products(payload: schema.ProductsLimitOffset, session: AsyncSessi
     p_list = []
     for p in r.scalars():
         sig_period = p.sig_period.total_seconds() if p.sig_period is not None else None
-        p_list.append(schema.Product(id=p.id, name=p.name, sig_install_limit=p.sig_install_limit,
-                                     sig_sessions_limit=p.sig_sessions_limit, sig_period=sig_period,
-                                     signatures=len(p.signatures)))
+        p_list.append(schema.ListedProduct(id=p.id, name=p.name, sig_install_limit=p.sig_install_limit,
+                                           sig_sessions_limit=p.sig_sessions_limit, sig_period=sig_period,
+                                           signatures=len(p.signatures)))
     return schema.ListProducts(products=p_list, items=len(p_list))
 
 
@@ -113,12 +113,12 @@ async def list_signatures(payload: schema.SignaturesLimitOffset, session: AsyncS
     return schema.ListSignatures(items=len(sig_list), signatures=sig_list, product_id=payload.product_id)
 
 
-@router.get("/interact_signature", response_model=schema.Signature)
+@router.get("/interact_signature", response_model=schema.GetSignature)
 async def get_signature(payload: schema.IdField, session: AsyncSession = Depends(create_session)):
     r = await session.execute(select(models.Signature).filter_by(id=payload.id))
     sig = r.scalar_one_or_none()
     if sig is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Signature not found")
-    return schema.Signature(id=sig.id, license_key=sig.license_key, additional_content=sig.additional_content,
-                            comment=sig.comment, installed=sig.installed, product_id=sig.product_id,
-                            activation_date=sig.activation_date)
+    return schema.GetSignature(id=sig.id, license_key=sig.license_key, additional_content=sig.additional_content,
+                               comment=sig.comment, installed=sig.installed, product_id=sig.product_id,
+                               activation_date=sig.activation_date)
