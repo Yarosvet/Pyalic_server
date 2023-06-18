@@ -74,3 +74,17 @@ async def delete_product(payload: schema.IdField, session: AsyncSession = Depend
     await session.delete(p)
     await session.commit()
     return schema.Successful()
+
+
+@router.get("/all_products", response_model=schema.ListProducts)
+async def all_products(payload: schema.ListLimitOffset, session: AsyncSession = Depends(create_session)):
+    r = await session.execute(
+        select(models.Product).order_by(models.Product.id).offset(payload.offset).limit(payload.limit).options(
+            selectinload(models.Product.signatures)))
+    p_list = []
+    for p in r.scalars():
+        sig_period = p.sig_period.total_seconds() if p.sig_period is not None else None
+        p_list.append(schema.Product(id=p.id, name=p.name, sig_install_limit=p.sig_install_limit,
+                                     sig_sessions_limit=p.sig_sessions_limit, sig_period=sig_period,
+                                     signatures=len(p.signatures)))
+    return schema.ListProducts(products=p_list, items=len(p_list))

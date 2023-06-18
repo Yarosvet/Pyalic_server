@@ -7,7 +7,7 @@ class Product(BaseModel):
     sig_install_limit: int | None
     sig_sessions_limit: int | None
     sig_period: int | None
-    additional_content: str
+    additional_content: str = ""
 
     id: Optional[int]
     signatures: Optional[int]
@@ -30,6 +30,7 @@ class Successful(BaseModel):
 class ListProducts(BaseModel):
     success: bool = True
     products: list[Product]
+    items: int
 
 
 class Signature(BaseModel):
@@ -40,3 +41,8 @@ class Signature(BaseModel):
     installed: Optional[int]
     activate: Optional[bool]
     id: Optional[int]
+
+
+class ListLimitOffset(BaseModel):
+    limit: int = 100
+    offset: int = 0
