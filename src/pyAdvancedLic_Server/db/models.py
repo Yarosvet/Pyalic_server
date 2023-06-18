@@ -7,7 +7,7 @@ class Signature(SqlAlchemyBase):
     __tablename__ = "signatures"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
-    license_key = Column(Text, nullable=False)
+    license_key = Column(Text, nullable=False, unique=True)
     additional_content = Column(Text, default='', nullable=False)
     comment = Column(Text, default="", nullable=False)
     installed = Column(BigInteger, default=0, nullable=False)

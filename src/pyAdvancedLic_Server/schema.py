@@ -32,11 +32,6 @@ class IdField(BaseModel):
     id: int
 
 
-class Unsuccessful(BaseModel):
-    success = False,
-    error: str | None
-
-
 class Successful(BaseModel):
     success = True
 
@@ -57,6 +52,19 @@ class GetSignature(ShortSignature):
     additional_content: str
     installed: int
     activation_date: str | None
+
+
+class AddSignature(BaseModel):
+    product_id: int
+    license_key: str
+    additional_content: str
+    comment: str
+    activate: bool = False
+
+
+class UpdateSignature(ShortSignature):
+    license_key: str
+    additional_content: str
 
 
 class ProductsLimitOffset(BaseModel):
