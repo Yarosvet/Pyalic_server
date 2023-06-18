@@ -43,6 +43,24 @@ class Signature(BaseModel):
     id: Optional[int]
 
 
-class ListLimitOffset(BaseModel):
+class ShortSignature(BaseModel):
+    id: int
+    comment: str
+
+
+class ProductsLimitOffset(BaseModel):
     limit: int = 100
     offset: int = 0
+
+
+class SignaturesLimitOffset(BaseModel):
+    product_id: int
+    limit: int = 100
+    offset: int = 0
+
+
+class ListSignatures(BaseModel):
+    success: bool = True
+    signatures: list[ShortSignature]
+    product_id: int
+    items: int

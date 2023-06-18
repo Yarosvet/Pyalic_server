@@ -86,8 +86,8 @@ async def delete_product(payload: schema.IdField, session: AsyncSession = Depend
     return schema.Successful()
 
 
-@router.get("/all_products", response_model=schema.ListProducts)
-async def all_products(payload: schema.ListLimitOffset, session: AsyncSession = Depends(create_session)):
+@router.get("/list_products", response_model=schema.ListProducts)
+async def list_products(payload: schema.ProductsLimitOffset, session: AsyncSession = Depends(create_session)):
     r = await session.execute(
         select(models.Product).order_by(models.Product.id).offset(payload.offset).limit(payload.limit).options(
             selectinload(models.Product.signatures)))
@@ -98,3 +98,16 @@ async def all_products(payload: schema.ListLimitOffset, session: AsyncSession = 
                                      sig_sessions_limit=p.sig_sessions_limit, sig_period=sig_period,
                                      signatures=len(p.signatures)))
     return schema.ListProducts(products=p_list, items=len(p_list))
+
+
+@router.get("/list_signatures", response_model=schema.ListSignatures)
+async def list_signatures(payload: schema.SignaturesLimitOffset, session: AsyncSession = Depends(create_session)):
+    r = await session.execute(select(models.Product).filter_by(id=payload.product_id))
+    if r.scalar_one_or_none() is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+    r = await session.execute(select(models.Signature).filter_by(product_id=payload.product_id)
+                              .order_by(models.Signature.id).offset(payload.offset).limit(payload.limit))
+    sig_list = []
+    for sig in r.scalars():
+        sig_list.append(schema.ShortSignature(comment=sig.comment, id=sig.id))
+    return schema.ListSignatures(items=len(sig_list), signatures=sig_list, product_id=payload.product_id)
