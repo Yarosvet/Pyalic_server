@@ -7,9 +7,8 @@ from .routers import admin, user
 
 app = FastAPI()
 app.include_router(admin.router, prefix='/admin')
+app.include_router(user.router)
 
-
-# app.include_router(user.router)
 
 @app.on_event('startup')
 async def init_models_db():
