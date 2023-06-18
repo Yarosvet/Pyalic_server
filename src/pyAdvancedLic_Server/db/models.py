@@ -11,7 +11,7 @@ class Signature(SqlAlchemyBase):
     additional_content = Column(Text, default='', nullable=False)
     comment = Column(Text, default="", nullable=False)
     installed = Column(BigInteger, default=0, nullable=False)
-    activation_time = Column(DateTime, default=None)
+    activation_date = Column(DateTime, default=None)
 
     product_id = Column(BigInteger, ForeignKey("products.id"), nullable=False)
     product = orm.relationship("Product")
