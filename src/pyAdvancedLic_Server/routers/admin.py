@@ -1,13 +1,22 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 from datetime import timedelta
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from .. import schema
 from ..db import create_session, models
+from .. import config
 
-router = APIRouter()
+
+async def check_access_token(credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())):
+    token = credentials.credentials
+    if token != config.ACCESS_TOKEN:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Wrong token")
+
+
+router = APIRouter(dependencies=[Depends(check_access_token)])
 
 
 @router.get("/interact_product", response_model=schema.Product)
@@ -16,7 +25,7 @@ async def get_product(payload: schema.IdField, session: AsyncSession = Depends(c
         selectinload(models.Product.signatures)))
     p = r.scalar_one_or_none()
     if p is None:
-        raise HTTPException(status_code=404, detail="Product not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
     sig_period = p.sig_period.total_seconds() if p.sig_period is not None else None
     return schema.Product(success=True, name=p.name, sig_install_limit=p.sig_install_limit,
                           sig_sessions_limit=p.sig_sessions_limit, sig_period=sig_period,
@@ -28,7 +37,8 @@ async def add_product(payload: schema.Product, session: AsyncSession = Depends(c
     r = await session.execute(select(models.Product).filter_by(name=payload.name))
     p = r.scalar_one_or_none()
     if p is not None:
-        raise HTTPException(status_code=400, detail="Product with specified name already exists")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Product with specified name already exists")
     p = models.Product(name=payload.name, sig_install_limit=payload.sig_install_limit,
                        sig_sessions_limit=payload.sig_sessions_limit,
                        sig_period=timedelta(seconds=payload.sig_period) if payload.sig_period is not None else None,
@@ -48,7 +58,7 @@ async def update_product(payload: schema.Product, session: AsyncSession = Depend
         selectinload(models.Product.signatures)))
     p = r.scalar_one_or_none()
     if p is None:
-        raise HTTPException(status_code=404, detail="Product not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
     p.name = payload.name
     p.sig_install_limit = payload.sig_install_limit
     p.sig_sessions_limit = payload.sig_sessions_limit
@@ -68,7 +78,7 @@ async def delete_product(payload: schema.IdField, session: AsyncSession = Depend
         selectinload(models.Product.signatures)))
     p = r.scalar_one_or_none()
     if p is None:
-        raise HTTPException(status_code=404, detail="Product not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
     for sig in p.signatures:
         await session.delete(sig)
     await session.delete(p)
