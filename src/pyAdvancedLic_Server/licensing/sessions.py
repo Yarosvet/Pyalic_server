@@ -9,26 +9,32 @@ class SessionNotFoundException(Exception):
     pass
 
 
-def _random_string(length: int):
-    return "".join([random.choice(ascii_letters + digits) for _ in range(length)])
+def _random_session_id(signature_id: int):
+    return f"{str(signature_id)}:" + "".join([random.choice(ascii_letters + digits) for _ in range(32)])
 
 
 async def create_session(signature_id: int) -> str:
-    session_id = _random_string(32)
+    session_id = _random_session_id(signature_id)
     while await redis.exists(session_id):
-        session_id = _random_string(32)
-    session = {'signature_id': signature_id, 'last_keepalive': datetime.utcnow().isoformat()}
-    await redis.hmset(session_id, session)
+        session_id = _random_session_id(signature_id)
+    await redis.hmset(session_id, datetime.utcnow().isoformat())
     return session_id
 
 
 async def keep_alive(session_id: str):
     if not await redis.exists(session_id):
         raise SessionNotFoundException
-    await redis.hset(session_id, key='last_keepalive', value=datetime.utcnow().timestamp())
+    await redis.set(session_id, datetime.utcnow().isoformat())
 
 
 async def end_session(session_id: str):
     if not await redis.exists(session_id):
         raise SessionNotFoundException
     await redis.delete(session_id)
+
+
+async def search_sessions(signature_id: int):
+    res = []
+    for session_id in await redis.scan_iter(match=f"{signature_id}:*", _type=str):
+        res.append(session_id)
+    return res
