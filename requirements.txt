@@ -4,3 +4,4 @@ fastapi
 python-dotenv
 pydantic
 uvicorn
+redis

@@ -7,3 +7,10 @@ DB_USER = environ.get('DB_USER')
 DB_PASSWORD = environ.get('DB_PASSWORD')
 DB_NAME = environ.get('DB_NAME')
 ACCESS_TOKEN = environ.get('ACCESS_TOKEN')
+
+REDIS_HOST = environ.get('REDIS_HOST')
+REDIS_PORT = environ.get('REDIS_PORT')
+REDIS_PASSWORD = environ.get('REDIS_PASSWORD')
+REDIS_DB = environ.get('REDIS_DB')
+
+SESSION_ALIVE_PERIOD = environ.get('SESSION_ALIVE_PERIOD', default=5)
