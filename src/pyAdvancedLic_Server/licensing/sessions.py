@@ -17,7 +17,7 @@ async def create_session(signature_id: int) -> str:
     session_id = _random_session_id(signature_id)
     while await redis.exists(session_id):
         session_id = _random_session_id(signature_id)
-    await redis.hmset(session_id, datetime.utcnow().isoformat())
+    await redis.set(session_id, datetime.utcnow().isoformat())
     return session_id
 
 
@@ -33,8 +33,8 @@ async def end_session(session_id: str):
     await redis.delete(session_id)
 
 
-async def search_sessions(signature_id: int):
+async def search_sessions(signature_id: int) -> list[str]:
     res = []
-    for session_id in await redis.scan_iter(match=f"{signature_id}:*", _type=str):
+    async for session_id in redis.scan_iter(match=f"{signature_id}:*"):
         res.append(session_id)
     return res

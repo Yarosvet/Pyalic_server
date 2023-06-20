@@ -94,5 +94,12 @@ class BadLicense(BaseModel):
     error: str
 
 
+class GoodLicense(BaseModel):
+    success = True
+    session_id: str
+    additional_content_signature: str
+    additional_content_product: str
+
+
 class SessionIdField(BaseModel):
     session_id: str
