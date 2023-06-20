@@ -82,3 +82,17 @@ class ListSignatures(BaseModel):
     signatures: list[ShortSignature]
     product_id: int
     items: int
+
+
+class CheckLicense(BaseModel):
+    license_key: str
+    fingerprint: str
+
+
+class BadLicense(BaseModel):
+    success = False
+    error: str
+
+
+class SessionIdField(BaseModel):
+    session_id: str
