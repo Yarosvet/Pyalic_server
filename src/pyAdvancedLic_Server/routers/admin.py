@@ -74,11 +74,13 @@ async def update_product(payload: schema.UpdateProduct, session: AsyncSession = 
 @router.delete("/interact_product", response_model=schema.Successful)
 async def delete_product(payload: schema.IdField, session: AsyncSession = Depends(create_session)):
     r = await session.execute(select(models.Product).filter_by(id=payload.id).options(
-        selectinload(models.Product.signatures)))
+        selectinload(models.Product.signatures, models.Signature.installations)))
     p = r.scalar_one_or_none()
     if p is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
     for sig in p.signatures:
+        for inst in sig.installations:
+            await session.delete(inst)
         await session.delete(sig)
     await session.delete(p)
     await session.commit()
@@ -114,13 +116,14 @@ async def list_signatures(payload: schema.SignaturesLimitOffset, session: AsyncS
 
 @router.get("/interact_signature", response_model=schema.GetSignature)
 async def get_signature(payload: schema.IdField, session: AsyncSession = Depends(create_session)):
-    r = await session.execute(select(models.Signature).filter_by(id=payload.id))
+    r = await session.execute(
+        select(models.Signature).filter_by(id=payload.id).options(selectinload(models.Signature.installations)))
     sig = r.scalar_one_or_none()
     if sig is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Signature not found")
     act_date = None if sig.activation_date is None else sig.activation_date.isoformat()
     return schema.GetSignature(id=sig.id, license_key=sig.license_key, additional_content=sig.additional_content,
-                               comment=sig.comment, installed=sig.installed, product_id=sig.product_id,
+                               comment=sig.comment, installed=len(sig.installations), product_id=sig.product_id,
                                activation_date=act_date)
 
 
@@ -138,13 +141,13 @@ async def add_signature(payload: schema.AddSignature, session: AsyncSession = De
     await session.refresh(sig)
     act_date = None if sig.activation_date is None else sig.activation_date.isoformat()
     return schema.GetSignature(id=sig.id, license_key=sig.license_key, additional_content=sig.additional_content,
-                               comment=sig.comment, installed=sig.installed, product_id=sig.product_id,
-                               activation_date=act_date)
+                               comment=sig.comment, installed=0, product_id=sig.product_id, activation_date=act_date)
 
 
 @router.put("/interact_signature", response_model=schema.GetSignature)
 async def update_signature(payload: schema.UpdateSignature, session: AsyncSession = Depends(create_session)):
-    r = await session.execute(select(models.Signature).filter_by(id=payload.id))
+    r = await session.execute(
+        select(models.Signature).filter_by(id=payload.id).options(selectinload(models.Signature.installations)))
     sig = r.scalar_one_or_none()
     if sig is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Signature not found")
@@ -155,7 +158,7 @@ async def update_signature(payload: schema.UpdateSignature, session: AsyncSessio
     await session.refresh(sig)
     act_date = None if sig.activation_date is None else sig.activation_date.isoformat()
     return schema.GetSignature(id=sig.id, license_key=sig.license_key, additional_content=sig.additional_content,
-                               comment=sig.comment, installed=sig.installed, product_id=sig.product_id,
+                               comment=sig.comment, installed=len(sig.installations), product_id=sig.product_id,
                                activation_date=act_date)
 
 

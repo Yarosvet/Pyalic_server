@@ -10,11 +10,12 @@ class Signature(SqlAlchemyBase):
     license_key = Column(Text, nullable=False, unique=True)
     additional_content = Column(Text, default='', nullable=False)
     comment = Column(Text, default="", nullable=False)
-    installed = Column(BigInteger, default=0, nullable=False)
     activation_date = Column(DateTime, default=None)
 
     product_id = Column(BigInteger, ForeignKey("products.id"), nullable=False)
     product = orm.relationship("Product")
+
+    installations = orm.relationship("Installation", back_populates="signature")
 
 
 class Product(SqlAlchemyBase):
@@ -28,3 +29,13 @@ class Product(SqlAlchemyBase):
     additional_content = Column(Text, default='', nullable=False)
 
     signatures = orm.relationship("Signature", back_populates="product")
+
+
+class Installation(SqlAlchemyBase):
+    __tablename__ = "installations"
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    fingerprint = Column(Text, nullable=False)
+
+    signature_id = Column(BigInteger, ForeignKey("signatures.id"), nullable=False)
+    signature = orm.relationship("Signature")
