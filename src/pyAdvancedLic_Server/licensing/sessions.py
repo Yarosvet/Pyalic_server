@@ -3,6 +3,7 @@ from string import ascii_letters, digits
 from datetime import datetime
 
 from . import redis
+from .. import config
 
 
 class SessionNotFoundException(Exception):
@@ -38,3 +39,11 @@ async def search_sessions(signature_id: int) -> list[str]:
     async for session_id in redis.scan_iter(match=f"{signature_id}:*"):
         res.append(session_id)
     return res
+
+
+async def clean_expired_sessions():
+    async for session_id in redis.scan_iter(match="*:*"):
+        last_keepalive_str = await redis.get(session_id)
+        if (datetime.utcnow() - datetime.fromisoformat(last_keepalive_str.decode('utf-8'))).total_seconds() \
+                >= config.SESSION_ALIVE_PERIOD:
+            await redis.delete(session_id)
