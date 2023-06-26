@@ -7,6 +7,7 @@ from .. import schema
 from ..licensing import engine as lic_engine
 from ..licensing import sessions as lic_sessions
 from ..db import create_session, models
+from ..loggers import logger
 
 router = APIRouter()
 
@@ -22,6 +23,7 @@ async def check_license(payload: schema.CheckLicense, session: AsyncSession = De
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
         return schema.GoodLicense(session_id=error_or_sid, additional_content_signature=sig.additional_content,
                                   additional_content_product=sig.product.additional_content)
+    await logger.warning(f"Access denied (key={payload.license_key}), message: {error_or_sid}")
     return schema.BadLicense(error=error_or_sid)
 
 

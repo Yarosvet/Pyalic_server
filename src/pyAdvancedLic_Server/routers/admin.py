@@ -8,6 +8,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from .. import schema
 from ..db import create_session, models
 from .. import config
+from ..loggers import logger
 
 
 async def check_access_token(credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())):
@@ -46,6 +47,7 @@ async def add_product(payload: schema.AddProduct, session: AsyncSession = Depend
     await session.commit()
     await session.refresh(p)
     sig_period = p.sig_period.total_seconds() if p.sig_period is not None else None
+    await logger.info(f"Added new product \"{p.name}\" with id={p.id}")
     return schema.GetProduct(name=p.name, sig_install_limit=p.sig_install_limit,
                              sig_sessions_limit=p.sig_sessions_limit, sig_period=sig_period,
                              additional_content=p.additional_content, id=p.id, signatures=0)
@@ -66,6 +68,7 @@ async def update_product(payload: schema.UpdateProduct, session: AsyncSession = 
     await session.commit()
     await session.refresh(p)
     sig_period = p.sig_period.total_seconds() if p.sig_period is not None else None
+    await logger.info(f"Updated product \"{p.name}\" with id={p.id}")
     return schema.GetProduct(name=p.name, sig_install_limit=p.sig_install_limit,
                              sig_sessions_limit=p.sig_sessions_limit, sig_period=sig_period,
                              additional_content=p.additional_content, id=p.id, signatures=len(p.signatures))
@@ -82,8 +85,11 @@ async def delete_product(payload: schema.IdField, session: AsyncSession = Depend
         for inst in sig.installations:
             await session.delete(inst)
         await session.delete(sig)
+    p_name = p.name
+    p_id = p.id
     await session.delete(p)
     await session.commit()
+    await logger.info(f"Deleted product \"{p_name}\" with id={p_id}")
     return schema.Successful()
 
 
@@ -140,6 +146,7 @@ async def add_signature(payload: schema.AddSignature, session: AsyncSession = De
     await session.commit()
     await session.refresh(sig)
     act_date = None if sig.activation_date is None else sig.activation_date.isoformat()
+    await logger.info(f"Added new signature with id={sig.id} of product_id={payload.product_id}")
     return schema.GetSignature(id=sig.id, license_key=sig.license_key, additional_content=sig.additional_content,
                                comment=sig.comment, installed=0, product_id=sig.product_id, activation_date=act_date)
 
@@ -157,6 +164,7 @@ async def update_signature(payload: schema.UpdateSignature, session: AsyncSessio
     await session.commit()
     await session.refresh(sig)
     act_date = None if sig.activation_date is None else sig.activation_date.isoformat()
+    await logger.info(f"Updated signature with id={sig.id}")
     return schema.GetSignature(id=sig.id, license_key=sig.license_key, additional_content=sig.additional_content,
                                comment=sig.comment, installed=len(sig.installations), product_id=sig.product_id,
                                activation_date=act_date)
@@ -170,4 +178,5 @@ async def delete_signature(payload: schema.IdField, session: AsyncSession = Depe
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Signature not found")
     await session.delete(sig)
     await session.commit()
+    await logger.info(f"Deleted signature with id={sig.id}")
     return schema.Successful()

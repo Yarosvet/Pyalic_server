@@ -5,6 +5,7 @@ from . import db
 from . import config
 from .routers import admin, user
 from .licensing import sessions as lic_sessions
+from . import loggers
 
 app = FastAPI()
 app.include_router(admin.router, prefix='/admin')
@@ -20,3 +21,9 @@ async def init_models_db():
 @repeat_every(seconds=2)
 async def periodic_clean_expired_sessions():
     await lic_sessions.clean_expired_sessions()
+
+
+@app.exception_handler(Exception)
+async def exception_handler(request, exc):
+    await loggers.logger.exception(f"Exception occurred in {request.method} {request.url}: {exc}")
+    return None

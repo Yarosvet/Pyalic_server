@@ -6,4 +6,6 @@ pydantic
 uvicorn
 redis
 fastapi-utils
+aiologger
+aiofiles
 requests
