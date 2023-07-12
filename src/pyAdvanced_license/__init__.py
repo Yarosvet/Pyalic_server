@@ -22,7 +22,7 @@ class LicenseManager:
         """
         Class for managing license
         :param root_url: Root URL of pyAdvancedLic Server
-        :param ssl_cert: Path to SSL cert, or **None** to cancel SSL verifying
+        :param ssl_public_key: Path to SSL cert, or **None** to cancel SSL verifying
         """
         self.url = root_url.rstrip("/\\")
         self.ssl_pkey = False if ssl_public_key is None else ssl_public_key
