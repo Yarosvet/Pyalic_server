@@ -19,12 +19,12 @@ lm = LicenseManager("https://LICENSE_SERVER_URL.ORG", ssl_public_key='./trusted_
 def my_program():
     print("Access granted!")
     time.sleep(30)
-    lm.end_session()
 
 
 key = input("Enter your license key: ")
 if lm.check_key(key):
     my_program()
+    lm.end_session()
 else:
     print("Access denied:", lm.status)
 ```
