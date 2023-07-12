@@ -8,4 +8,3 @@ redis
 fastapi-utils
 aiologger
 aiofiles
-requests
