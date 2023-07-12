@@ -2,8 +2,8 @@ from dotenv import load_dotenv
 from os import path, environ
 
 LOG_FILE = "lic_server.log"
-
-load_dotenv(path.join(path.dirname(__file__), '.env'))
+if path.exists(path.join(path.dirname(__file__), '.env')):
+    load_dotenv(path.join(path.dirname(__file__), '.env'))
 DB_HOST = environ.get('DB_HOST')
 DB_USER = environ.get('DB_USER')
 DB_PASSWORD = environ.get('DB_PASSWORD')
