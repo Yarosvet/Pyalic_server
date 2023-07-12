@@ -8,3 +8,4 @@ redis
 fastapi-utils
 aiologger
 aiofiles
+gunicorn
