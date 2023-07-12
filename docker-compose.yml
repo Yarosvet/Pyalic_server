@@ -28,9 +28,11 @@ services:
     build: src/nginx
     ports:
       - 80:80
-#      - 443:443
+      - 443:443
     depends_on:
       - lic_server
+    volumes:
+      - /etc/ssl/lic_server:/etc/ssl/lic_server
 
   postgresql:
     image: "postgres:15-alpine"
