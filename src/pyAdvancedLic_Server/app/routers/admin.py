@@ -5,9 +5,8 @@ from sqlalchemy.orm import selectinload
 from datetime import timedelta, datetime
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from .. import schema
+from .. import schema, config
 from ..db import create_session, models
-from .. import config
 from ..loggers import logger
 
 

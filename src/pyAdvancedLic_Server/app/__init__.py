@@ -1,11 +1,9 @@
 from fastapi import FastAPI
 from fastapi_utils.tasks import repeat_every
 
-from . import db
-from . import config
 from .routers import admin, user
 from .licensing import sessions as lic_sessions
-from . import loggers
+from . import loggers, db, config
 
 app = FastAPI()
 app.include_router(admin.router, prefix='/admin')
