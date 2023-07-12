@@ -4,7 +4,7 @@ Licensing server which allows you to manage access to your products
 
 # Install in Docker and run
 
-Firstly make an SSL certificate for web server and place them to `/etc/ssl/lic_server/`.
+Firstly make an SSL certificate (and private key) for web server and place it to `/etc/ssl/lic_server/`.
 
 ```
 /etc/ssl/
@@ -14,7 +14,7 @@ Firstly make an SSL certificate for web server and place them to `/etc/ssl/lic_s
 
 ```
 
-You can create self-signed by executing next command and typing your IP or domain in `Common name` row:
+You can create self-signed one by executing next command and typing your IP or domain in `Common name` row:
 
 ```shell
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/lic_server/key.key -out /etc/ssl/lic_server/cert.crt
