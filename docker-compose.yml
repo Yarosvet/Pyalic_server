@@ -1,0 +1,59 @@
+version: "1.0"
+
+services:
+  lic_server:
+    build: src/pyAdvancedLic_Server
+    command: gunicorn -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000 app:app
+    environment:
+      DB_HOST: postgresql:5432
+      DB_USER: lic_server
+      DB_PASSWORD: "db_password"
+      DB_NAME: advanced_lic
+
+      ACCESS_TOKEN: "access_token"
+
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: "redis_password"
+      REDIS_DB: 1
+
+      SESSION_ALIVE_PERIOD: 4
+    expose:
+      - 8000
+    depends_on:
+      - postgresql
+      - redis
+
+  nginx:
+    build: src/nginx
+    ports:
+      - 80:80
+      - 443:443
+    depends_on:
+      - lic_server
+    volumes:
+      - /etc/ssl/lic_server:/etc/ssl/lic_server
+
+  postgresql:
+    image: "postgres:15-alpine"
+    expose:
+      - 5432
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      POSTGRES_USER: lic_server
+      POSTGRES_PASSWORD: "db_password"
+      POSTGRES_DB: advanced_lic
+
+  redis:
+    image: "redis:alpine"
+    expose:
+      - 6379
+    restart: always
+    volumes:
+      - redis_data:/data
+    command: redis-server --save 1 30 --loglevel warning --requirepass "redis_password"
+
+volumes:
+  postgres_data:
+  redis_data:

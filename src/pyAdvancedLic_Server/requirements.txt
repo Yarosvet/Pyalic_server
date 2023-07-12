@@ -1,0 +1,11 @@
+sqlalchemy
+asyncpg
+fastapi
+python-dotenv
+pydantic
+uvicorn
+redis
+fastapi-utils
+aiologger
+aiofiles
+gunicorn
