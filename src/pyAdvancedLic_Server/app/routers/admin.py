@@ -3,20 +3,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 from datetime import timedelta, datetime
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.security import OAuth2PasswordRequestForm
 
 from .. import schema, config
 from ..db import create_session, models
 from ..loggers import logger
+from .. import auth
 
-
-async def check_access_token(credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())):
-    token = credentials.credentials
-    if token != config.ACCESS_TOKEN:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Wrong token")
-
-
-router = APIRouter(dependencies=[Depends(check_access_token)])
+router = APIRouter(dependencies=[Depends(auth.get_current_user)])
+public_router = APIRouter()
 
 
 @router.get("/interact_product", response_model=schema.GetProduct)
@@ -179,3 +174,25 @@ async def delete_signature(payload: schema.IdField, session: AsyncSession = Depe
     await session.commit()
     await logger.info(f"Deleted signature with id={sig.id}")
     return schema.Successful()
+
+
+@public_router.post("/token", response_model=schema.Token)
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(),
+                                 session: AsyncSession = Depends(create_session)):
+    user = await auth.authenticate_user(form_data.username, form_data.password, session)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=config.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = auth.create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.get("/users/me/", response_model=schema.User)
+async def users_me(current_user: schema.User = Depends(auth.get_current_user)):
+    return current_user

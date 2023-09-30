@@ -103,3 +103,16 @@ class GoodLicense(BaseModel):
 
 class SessionIdField(BaseModel):
     session_id: str
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class TokenData(BaseModel):
+    username: str | None = None
+
+
+class User(BaseModel):
+    username: str

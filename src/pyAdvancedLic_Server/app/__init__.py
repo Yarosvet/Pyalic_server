@@ -7,7 +7,9 @@ from . import loggers, db, config
 
 app = FastAPI()
 app.include_router(admin.router, prefix='/admin')
+app.include_router(admin.public_router, prefix='/admin')
 app.include_router(user.router)
+
 
 
 @app.on_event('startup')

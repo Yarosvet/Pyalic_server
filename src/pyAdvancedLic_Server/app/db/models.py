@@ -39,3 +39,10 @@ class Installation(SqlAlchemyBase):
 
     signature_id = Column(BigInteger, ForeignKey("signatures.id"), nullable=False)
     signature = orm.relationship("Signature")
+
+
+class User(SqlAlchemyBase):
+    __tablename__ = "users"
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    username = Column(Text, nullable=False)
+    hashed_password = Column(Text, nullable=False)
