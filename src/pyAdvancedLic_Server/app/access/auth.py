@@ -42,7 +42,7 @@ async def authenticate_user(username: str, password: str, session: AsyncSession)
         return False
     if not check_password(password, user.hashed_password):
         return False
-    return User(username=user.username)
+    return User(username=user.username, id=user.id)
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme), session: AsyncSession = Depends(create_session)):
@@ -63,4 +63,4 @@ async def get_current_user(token: str = Depends(oauth2_scheme), session: AsyncSe
     user = r.scalar_one_or_none()
     if user is None:
         raise credentials_exception
-    return User(username=user.username)
+    return User(username=user.username, id=user.id)
