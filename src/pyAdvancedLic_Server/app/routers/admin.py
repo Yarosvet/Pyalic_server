@@ -8,7 +8,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from .. import schema, config
 from ..db import create_session, models
 from ..loggers import logger
-from .. import auth
+from ..access import auth
 
 router = APIRouter(dependencies=[Depends(auth.get_current_user)])
 public_router = APIRouter()

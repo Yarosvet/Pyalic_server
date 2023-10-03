@@ -6,9 +6,9 @@ from sqlalchemy.future import select
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
-from .db import models, create_session
-from .config import SECRET_KEY
-from .schema import TokenData, User
+from ..db import models, create_session
+from ..config import SECRET_KEY
+from ..schema import TokenData, User
 
 ALGORITHM = "HS256"
 

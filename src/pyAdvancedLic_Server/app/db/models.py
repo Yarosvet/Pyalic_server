@@ -1,6 +1,7 @@
 from sqlalchemy import Column, BigInteger, Integer, Interval, Text, DateTime, orm, ForeignKey
 
 from . import SqlAlchemyBase
+from ..access.permissions import DEFAULT_PERMISSIONS
 
 
 class Signature(SqlAlchemyBase):
@@ -46,3 +47,4 @@ class User(SqlAlchemyBase):
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     username = Column(Text, nullable=False)
     hashed_password = Column(Text, nullable=False)
+    permissions = Column(Text, default=DEFAULT_PERMISSIONS, nullable=False)

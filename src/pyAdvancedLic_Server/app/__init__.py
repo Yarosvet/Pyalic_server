@@ -11,7 +11,6 @@ app.include_router(admin.public_router, prefix='/admin')
 app.include_router(user.router)
 
 
-
 @app.on_event('startup')
 async def init_models_db():
     await db.global_init(config.DB_USER, config.DB_PASSWORD, config.DB_HOST, config.DB_NAME)
