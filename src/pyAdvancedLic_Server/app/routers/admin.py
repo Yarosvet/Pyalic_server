@@ -28,16 +28,25 @@ async def get_product(payload: schema.IdField, session: AsyncSession = Depends(c
 
 
 @router.post("/interact_product", response_model=schema.GetProduct)
-async def add_product(payload: schema.AddProduct, session: AsyncSession = Depends(create_session)):
+async def add_product(payload: schema.AddProduct,
+                      session: AsyncSession = Depends(create_session),
+                      current_user: schema.User = Depends(auth.get_current_user)):
     r = await session.execute(select(models.Product).filter_by(name=payload.name))
-    if r.scalar_one_or_none() is not None:
+    if r.unique().scalars().first() is not None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="Product with specified name already exists")
-    p = models.Product(name=payload.name, sig_install_limit=payload.sig_install_limit,
+    p = models.Product(name=payload.name,
+                       sig_install_limit=payload.sig_install_limit,
                        sig_sessions_limit=payload.sig_sessions_limit,
                        sig_period=timedelta(seconds=payload.sig_period) if payload.sig_period is not None else None,
                        additional_content=payload.additional_content)
     session.add(p)
+    await session.commit()
+    await session.refresh(p)
+    r = await session.execute(select(models.User).filter_by(id=current_user.id))
+    user_in_db = r.unique().scalars().first()
+    assert user_in_db is not None
+    p.owners.append(user_in_db)
     await session.commit()
     await session.refresh(p)
     sig_period = p.sig_period.total_seconds() if p.sig_period is not None else None
