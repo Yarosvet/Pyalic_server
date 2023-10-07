@@ -2,8 +2,8 @@ import requests
 from threading import Thread
 import time
 
-from pyAdvanced_license.pyAdvanced_license.fingerprint import get_fingerprint
-from pyAdvanced_license.pyAdvanced_license.status import ACCESS_APPROVED, INITIALIZED, SESSION_ENDED
+from .fingerprint import get_fingerprint
+from .status import ACCESS_APPROVED, INITIALIZED, SESSION_ENDED
 
 ATTEMPTS = 3
 
