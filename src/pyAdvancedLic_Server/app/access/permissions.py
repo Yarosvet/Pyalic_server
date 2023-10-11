@@ -1,3 +1,5 @@
+from ..db import models
+
 DEFAULT_PERMISSIONS = "manage_own_products,manage_own_users"
 
 
@@ -43,8 +45,29 @@ class Permissions:
         return 'create_users' in self._permissions or self.is_superuser()
 
     def can_manage_own_users(self) -> bool:
-        return 'manage_own_users' in self._permissions or self.can_create_users() or self.can_manage_other_users()\
+        return 'manage_own_users' in self._permissions or self.can_create_users() or self.can_manage_other_users() \
             or self.is_superuser()
 
     def can_manage_other_users(self) -> bool:
         return 'manage_other_users' in self._permissions or self.is_superuser()
+
+
+class VerifiablePermissions(Permissions):
+    def __init__(self, u: 'models.User'):
+        super().__init__(u.permissions)
+        self._u = u
+
+    def able_get_product(self, p: 'models.Product') -> bool:
+        return (self.can_manage_own_products() and p in self._u.owned_products) or \
+            (self.can_read_other_products() and p not in self._u.owned_products)
+
+    def able_edit_product(self, p: 'models.Product') -> bool:
+        return (self.can_manage_own_products() and p in self._u.owned_products) or \
+            (self.can_manage_other_products() and p not in self._u.owned_products)
+
+    def able_delete_product(self, p: 'models.Product') -> bool:
+        return (self.can_manage_own_products() and p in self._u.owned_products) or \
+            (self.can_manage_other_products() and p not in self._u.owned_products)
+
+    def able_add_product(self) -> bool:
+        return self.can_manage_own_products()

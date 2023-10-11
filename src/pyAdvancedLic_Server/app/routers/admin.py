@@ -14,13 +14,34 @@ router = APIRouter(dependencies=[Depends(auth.get_current_user)])
 public_router = APIRouter()
 
 
+async def _get_user_with_prod(current_user: schema.User, session: AsyncSession) -> models.User:
+    r = await session.execute(
+        select(models.User).filter_by(id=current_user.id).options(selectinload(models.User.owned_products)))
+    user_in_db = r.scalar_one_or_none()
+    assert user_in_db is not None
+    return user_in_db
+
+
+async def _get_user(current_user: schema.User, session: AsyncSession) -> models.User:
+    r = await session.execute(
+        select(models.User).filter_by(id=current_user.id))
+    user_in_db = r.scalar_one_or_none()
+    assert user_in_db is not None
+    return user_in_db
+
+
 @router.get("/interact_product", response_model=schema.GetProduct)
-async def get_product(payload: schema.IdField, session: AsyncSession = Depends(create_session)):
+async def get_product(payload: schema.IdField,
+                      session: AsyncSession = Depends(create_session),
+                      current_user: schema.User = Depends(auth.get_current_user)):
     r = await session.execute(select(models.Product).filter_by(id=payload.id).options(
         selectinload(models.Product.signatures)))
     p = r.scalar_one_or_none()
     if p is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+    user_in_db = await _get_user_with_prod(current_user, session)
+    if not user_in_db.get_verifiable_permissions().able_get_product(p):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You have no permission")
     sig_period = p.sig_period.total_seconds() if p.sig_period is not None else None
     return schema.GetProduct(name=p.name, sig_install_limit=p.sig_install_limit,
                              sig_sessions_limit=p.sig_sessions_limit, sig_period=sig_period,
@@ -35,6 +56,9 @@ async def add_product(payload: schema.AddProduct,
     if r.unique().scalars().first() is not None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="Product with specified name already exists")
+    user_in_db = await _get_user_with_prod(current_user, session)
+    if not user_in_db.get_verifiable_permissions().able_add_product():
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You have no permission")
     p = models.Product(name=payload.name,
                        sig_install_limit=payload.sig_install_limit,
                        sig_sessions_limit=payload.sig_sessions_limit,
@@ -43,10 +67,7 @@ async def add_product(payload: schema.AddProduct,
     session.add(p)
     await session.commit()
     await session.refresh(p)
-    r = await session.execute(select(models.User).filter_by(id=current_user.id))
-    user_in_db = r.unique().scalars().first()
-    assert user_in_db is not None
-    p.owners.append(user_in_db)
+    user_in_db.owned_products.append(p)
     await session.commit()
     await session.refresh(p)
     sig_period = p.sig_period.total_seconds() if p.sig_period is not None else None
@@ -57,12 +78,17 @@ async def add_product(payload: schema.AddProduct,
 
 
 @router.put("/interact_product", response_model=schema.GetProduct)
-async def update_product(payload: schema.UpdateProduct, session: AsyncSession = Depends(create_session)):
+async def update_product(payload: schema.UpdateProduct,
+                         session: AsyncSession = Depends(create_session),
+                         current_user: schema.User = Depends(auth.get_current_user)):
     r = await session.execute(select(models.Product).filter_by(id=payload.id).options(
         selectinload(models.Product.signatures)))
     p = r.scalar_one_or_none()
     if p is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+    user_in_db = await _get_user_with_prod(current_user, session)
+    if not user_in_db.get_verifiable_permissions().able_edit_product(p):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You have no permission")
     p.name = payload.name
     p.sig_install_limit = payload.sig_install_limit
     p.sig_sessions_limit = payload.sig_sessions_limit
@@ -78,12 +104,17 @@ async def update_product(payload: schema.UpdateProduct, session: AsyncSession = 
 
 
 @router.delete("/interact_product", response_model=schema.Successful)
-async def delete_product(payload: schema.IdField, session: AsyncSession = Depends(create_session)):
+async def delete_product(payload: schema.IdField,
+                         session: AsyncSession = Depends(create_session),
+                         current_user: schema.User = Depends(auth.get_current_user)):
     r = await session.execute(select(models.Product).filter_by(id=payload.id).options(
         selectinload(models.Product.signatures, models.Signature.installations)))
     p = r.scalar_one_or_none()
     if p is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+    user_in_db = await _get_user_with_prod(current_user, session)
+    if not user_in_db.get_verifiable_permissions().able_delete_product(p):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You have no permission")
     for sig in p.signatures:
         for inst in sig.installations:
             await session.delete(inst)
@@ -111,10 +142,16 @@ async def list_products(payload: schema.ProductsLimitOffset, session: AsyncSessi
 
 
 @router.get("/list_signatures", response_model=schema.ListSignatures)
-async def list_signatures(payload: schema.SignaturesLimitOffset, session: AsyncSession = Depends(create_session)):
+async def list_signatures(payload: schema.SignaturesLimitOffset,
+                          session: AsyncSession = Depends(create_session),
+                          current_user: schema.User = Depends(auth.get_current_user)):
     r = await session.execute(select(models.Product).filter_by(id=payload.product_id))
-    if r.scalar_one_or_none() is None:
+    p = r.scalar_one_or_none()
+    if p is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+    user_in_db = await _get_user_with_prod(current_user, session)
+    if not user_in_db.get_verifiable_permissions().able_get_product(p):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You have no permission")
     r = await session.execute(select(models.Signature).filter_by(product_id=payload.product_id)
                               .order_by(models.Signature.id).offset(payload.offset).limit(payload.limit))
     sig_list = []
@@ -124,10 +161,16 @@ async def list_signatures(payload: schema.SignaturesLimitOffset, session: AsyncS
 
 
 @router.get("/interact_signature", response_model=schema.GetSignature)
-async def get_signature(payload: schema.IdField, session: AsyncSession = Depends(create_session)):
+async def get_signature(payload: schema.IdField,
+                        session: AsyncSession = Depends(create_session),
+                        current_user: schema.User = Depends(auth.get_current_user)):
     r = await session.execute(
-        select(models.Signature).filter_by(id=payload.id).options(selectinload(models.Signature.installations)))
+        select(models.Signature).filter_by(id=payload.id).options(
+            selectinload(models.Signature.installations).selectinload(models.Signature.product)))
     sig = r.scalar_one_or_none()
+    user_in_db = await _get_user_with_prod(current_user, session)
+    if not user_in_db.get_verifiable_permissions().able_get_product(sig.product):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You have no permission")
     if sig is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Signature not found")
     act_date = None if sig.activation_date is None else sig.activation_date.isoformat()
@@ -137,11 +180,20 @@ async def get_signature(payload: schema.IdField, session: AsyncSession = Depends
 
 
 @router.post("/interact_signature", response_model=schema.GetSignature)
-async def add_signature(payload: schema.AddSignature, session: AsyncSession = Depends(create_session)):
+async def add_signature(payload: schema.AddSignature,
+                        session: AsyncSession = Depends(create_session),
+                        current_user: schema.User = Depends(auth.get_current_user)):
     r = await session.execute(select(models.Signature).filter_by(license_key=payload.license_key))
     if r.scalar_one_or_none() is not None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="Signature with specified license key already exists")
+    r = await session.execute(select(models.Product).filter_by(id=payload.product_id))
+    p = r.scalar_one_or_none()
+    if p is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+    user_in_db = await _get_user_with_prod(current_user, session)
+    if not user_in_db.get_verifiable_permissions().able_edit_product(p):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You have no permission")
     sig = models.Signature(license_key=payload.license_key, additional_content=payload.additional_content,
                            comment=payload.comment, product_id=payload.product_id,
                            activation_date=None if not payload.activate else datetime.utcnow())
@@ -155,12 +207,18 @@ async def add_signature(payload: schema.AddSignature, session: AsyncSession = De
 
 
 @router.put("/interact_signature", response_model=schema.GetSignature)
-async def update_signature(payload: schema.UpdateSignature, session: AsyncSession = Depends(create_session)):
+async def update_signature(payload: schema.UpdateSignature,
+                           session: AsyncSession = Depends(create_session),
+                           current_user: schema.User = Depends(auth.get_current_user)):
     r = await session.execute(
-        select(models.Signature).filter_by(id=payload.id).options(selectinload(models.Signature.installations)))
+        select(models.Signature).filter_by(id=payload.id).options(
+            selectinload(models.Signature.installations).selectinload(models.Signature.product)))
     sig = r.scalar_one_or_none()
     if sig is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Signature not found")
+    user_in_db = await _get_user_with_prod(current_user, session)
+    if not user_in_db.get_verifiable_permissions().able_edit_product(sig.product):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You have no permission")
     sig.license_key = payload.license_key
     sig.comment = payload.comment
     sig.additional_content = payload.additional_content
@@ -174,11 +232,20 @@ async def update_signature(payload: schema.UpdateSignature, session: AsyncSessio
 
 
 @router.delete("/interact_signature", response_model=schema.Successful)
-async def delete_signature(payload: schema.IdField, session: AsyncSession = Depends(create_session)):
-    r = await session.execute(select(models.Signature).filter_by(id=payload.id))
+async def delete_signature(payload: schema.IdField,
+                           session: AsyncSession = Depends(create_session),
+                           current_user: schema.User = Depends(auth.get_current_user)):
+    r = await session.execute(select(models.Signature).filter_by(id=payload.id)
+                              .options(selectinload(models.Signature.installations).
+                                       selectinload(models.Signature.product)))
     sig = r.scalar_one_or_none()
     if sig is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Signature not found")
+    user_in_db = await _get_user_with_prod(current_user, session)
+    if not user_in_db.get_verifiable_permissions().able_edit_product(sig.product):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You have no permission")
+    for inst in sig.installations:
+        await session.delete(inst)
     await session.delete(sig)
     await session.commit()
     await logger.info(f"Deleted signature with id={sig.id}")
