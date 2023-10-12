@@ -59,11 +59,16 @@ async def update_product(payload: schema.UpdateProduct, session: AsyncSession = 
     p = r.scalar_one_or_none()
     if p is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
-    p.name = payload.name
-    p.sig_install_limit = payload.sig_install_limit
-    p.sig_sessions_limit = payload.sig_sessions_limit
-    p.sig_period = timedelta(seconds=payload.sig_period) if payload.sig_period is not None else None
-    p.additional_content = payload.additional_content
+    if 'name' not in payload.unspecified_fields:
+        p.name = payload.name
+    if 'sig_install_limit' not in payload.unspecified_fields:
+        p.sig_install_limit = payload.sig_install_limit
+    if 'sig_sessions_limit' not in payload.unspecified_fields:
+        p.sig_sessions_limit = payload.sig_sessions_limit
+    if 'sig_period' not in payload.unspecified_fields:
+        p.sig_period = timedelta(seconds=payload.sig_period) if payload.sig_period is not None else None
+    if 'additional_content' not in payload.unspecified_fields:
+        p.additional_content = payload.additional_content
     await session.commit()
     await session.refresh(p)
     sig_period = p.sig_period.total_seconds() if p.sig_period is not None else None
@@ -157,9 +162,12 @@ async def update_signature(payload: schema.UpdateSignature, session: AsyncSessio
     sig = r.scalar_one_or_none()
     if sig is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Signature not found")
-    sig.license_key = payload.license_key
-    sig.comment = payload.comment
-    sig.additional_content = payload.additional_content
+    if 'license_key' not in payload.unspecified_fields:
+        sig.license_key = payload.license_key
+    if 'comment' not in payload.unspecified_fields:
+        sig.comment = payload.comment
+    if 'additional_content' not in payload.unspecified_fields:
+        sig.additional_content = payload.additional_content
     await session.commit()
     await session.refresh(sig)
     act_date = None if sig.activation_date is None else sig.activation_date.isoformat()
