@@ -33,7 +33,7 @@ class IdField(BaseModel):
 
 
 class Successful(BaseModel):
-    success = True
+    success: bool = True
 
 
 class ListProducts(BaseModel):
@@ -114,6 +114,40 @@ class TokenData(BaseModel):
     username: str | None = None
 
 
-class User(BaseModel):
+class UserId(BaseModel):
+    id: int
+
+
+class User(UserId):
+    username: str
+
+
+class UserWithMaster(User):
+    master_id: int | None
+
+
+class ExpandedUser(UserWithMaster):
+    permissions: str
+
+
+class ListUsers(BaseModel):
+    users: list[User]
+    items: int
+
+
+class UsersLimitOffset(BaseModel):
+    limit: int = 100
+    offset: int = 0
+
+
+class AddUser(BaseModel):
+    username: str
+    password: str
+    permissions: str
+
+
+class UpdateUser(BaseModel):
     id: int
     username: str
+    permissions: str
+    password: str

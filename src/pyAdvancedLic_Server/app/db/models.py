@@ -1,7 +1,7 @@
 from sqlalchemy import Column, BigInteger, Integer, Interval, Text, DateTime, orm, ForeignKey, Table
 
 from . import SqlAlchemyBase
-from ..access.permissions import DEFAULT_PERMISSIONS, VerifiablePermissions
+from ..access.permissions import DEFAULT_PERMISSIONS, VerifiablePermissions, Permissions
 
 user_product_table = Table(
     "user_product",
@@ -59,6 +59,12 @@ class User(SqlAlchemyBase):
     permissions = Column(Text, default=DEFAULT_PERMISSIONS, nullable=False)
 
     owned_products = orm.relationship('Product', secondary=user_product_table, back_populates="owners")
+
+    master_id = Column(BigInteger, ForeignKey('users.id'))
+    master = orm.relationship('User', backref='slaves', remote_side='User.id', lazy='joined')
+
+    def get_permissions(self) -> Permissions:
+        return Permissions(self.permissions)
 
     def get_verifiable_permissions(self) -> VerifiablePermissions:
         return VerifiablePermissions(self)

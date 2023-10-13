@@ -29,6 +29,12 @@ class Permissions:
     def __str__(self) -> str:
         return ','.join(self._permissions)
 
+    def __iter__(self):
+        return iter(self._permissions)
+
+    def __contains__(self, item):
+        return self._permissions.__contains__(item)
+
     def is_superuser(self) -> bool:
         return 'superuser' in self._permissions
 
@@ -71,3 +77,33 @@ class VerifiablePermissions(Permissions):
 
     def able_add_product(self) -> bool:
         return self.can_manage_own_products()
+
+    def able_add_user(self, permissions: str) -> bool:
+        try:
+            perm_obj = Permissions(permissions)
+        except InvalidPermissionsString:
+            return False
+        for p in perm_obj:
+            if p not in self._u.get_permissions() and not self.is_superuser():
+                return False
+        return self.can_manage_own_users()
+
+    def able_edit_user(self, u: 'models.User', permissions: str | None = None) -> bool:
+        if permissions is not None:
+            try:
+                perm_obj = Permissions(permissions)
+            except InvalidPermissionsString:
+                return False
+            for p in perm_obj:
+                if p not in self._u.get_permissions() and not self.is_superuser():
+                    return False
+        if u.master != self._u:
+            return self.can_manage_other_users()
+        return self.can_manage_own_users()
+
+    def able_delete_user(self, u: 'models.User') -> bool:
+        if u == self._u:
+            return False
+        if u.master != self._u:
+            return self.can_manage_other_users()
+        return self.can_manage_own_users()

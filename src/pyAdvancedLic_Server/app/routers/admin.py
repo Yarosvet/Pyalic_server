@@ -272,3 +272,80 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 @router.get("/users/me/", response_model=schema.User)
 async def users_me(current_user: schema.User = Depends(auth.get_current_user)):
     return current_user
+
+
+@router.get("/users/list", response_model=schema.ListUsers)
+async def list_users(payload: schema.UsersLimitOffset, session: AsyncSession = Depends(create_session)):
+    r = await session.execute(select(models.User).order_by(models.User.id).offset(payload.offset).limit(payload.limit))
+    users = []
+    for u in r.scalars():
+        users.append(schema.User(id=u.id, username=u.username))
+    return schema.ListUsers(items=len(users), users=users)
+
+
+@router.get("/users/interact_user", response_model=schema.ExpandedUser)
+async def get_user(payload: schema.UserId,
+                   session: AsyncSession = Depends(create_session)):
+    r = await session.execute(select(models.User).filter_by(id=payload.id))
+    u = r.scalar_one_or_none()
+    if u is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    return schema.ExpandedUser(id=u.id, username=u.username, master_id=u.master_id, permissions=u.permissions)
+
+
+@router.post("/users/interact_user", response_model=schema.ExpandedUser)
+async def add_user(payload: schema.AddUser,
+                   session: AsyncSession = Depends(create_session),
+                   current_user: schema.User = Depends(auth.get_current_user)):
+    current_user_in_db = await _get_user(current_user, session)
+    if not current_user_in_db.get_verifiable_permissions().able_add_user(payload.permissions):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You have no permission")
+    r = await session.execute(select(models.User).filter_by(username=payload.username))
+    if r.scalar_one_or_none() is not None:
+        raise HTTPException(status_code=409, detail="User with specified username already exists")
+    u = models.User(username=payload.username,
+                    hashed_password=auth.get_password_hash(payload.password),
+                    permissions=payload.permissions,
+                    master_id=current_user_in_db.id)
+    session.add(u)
+    await session.commit()
+    await session.refresh(u)
+    return schema.ExpandedUser(id=u.id, username=u.username, master_id=u.master_id, permissions=u.permissions)
+
+
+@router.put("/users/interact_user", response_model=schema.ExpandedUser)
+async def update_user(payload: schema.UpdateUser,
+                      session: AsyncSession = Depends(create_session),
+                      current_user: schema.User = Depends(auth.get_current_user)):
+    r = await session.execute(select(models.User).filter_by(id=payload.id))
+    u = r.scalar_one_or_none()
+    if u is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    current_user_in_db = await _get_user(current_user, session)
+    if not current_user_in_db.get_verifiable_permissions().able_edit_user(u, payload.permissions):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You have no permission")
+    r = await session.execute(select(models.User).filter_by(username=payload.username))
+    if r.scalar_one_or_none() is not None:
+        raise HTTPException(status_code=409, detail="User with specified username already exists")
+    u.username = payload.username
+    u.hashed_password = auth.get_password_hash(payload.password)
+    u.permissions = payload.permissions
+    await session.commit()
+    await session.refresh(u)
+    return schema.ExpandedUser(id=u.id, username=u.username, master_id=u.master_id, permissions=u.permissions)
+
+
+@router.delete("/users/interact_user", response_model=schema.Successful)
+async def delete_user(payload: schema.UserId,
+                      session: AsyncSession = Depends(create_session),
+                      current_user: schema.User = Depends(auth.get_current_user)):
+    r = await session.execute(select(models.User).filter_by(id=payload.id))
+    u = r.scalar_one_or_none()
+    if u is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    current_user_in_db = await _get_user(current_user, session)
+    if not current_user_in_db.get_verifiable_permissions().able_delete_user(u):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You have no permission")
+    await session.delete(u)
+    await session.commit()
+    return schema.Successful()
