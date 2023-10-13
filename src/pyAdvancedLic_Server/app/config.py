@@ -16,3 +16,6 @@ REDIS_PASSWORD = environ.get('REDIS_PASSWORD')
 REDIS_DB = environ.get('REDIS_DB')
 
 SESSION_ALIVE_PERIOD = int(environ.get('SESSION_ALIVE_PERIOD', default=4))
+
+SECRET_KEY = environ.get('SECRET_KEY')
+ACCESS_TOKEN_EXPIRE_MINUTES = environ.get('ACCESS_TOKEN_EXPIRE_MINUTES', default=30)

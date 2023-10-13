@@ -9,3 +9,6 @@ fastapi-utils
 aiologger
 aiofiles
 gunicorn
+passlib[bcrypt]
+python-jose[cryptography]
+python-multipart
