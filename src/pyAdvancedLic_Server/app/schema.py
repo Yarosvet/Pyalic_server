@@ -1,4 +1,20 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, root_validator
+
+
+class UnspecifiedModel(BaseModel):
+    _unspecified = []
+
+    @root_validator(pre=True)
+    def mark_as_unspecified(cls, values: dict):
+        for field in cls.__fields__:
+            print(field)
+            if field not in values.keys():
+                cls._unspecified.append(field)
+        return values
+
+    @property
+    def unspecified_fields(self) -> list[str]:
+        return self._unspecified
 
 
 class ShortProduct(BaseModel):
@@ -12,9 +28,13 @@ class AddProduct(ShortProduct):
     additional_content: str = ""
 
 
-class UpdateProduct(ShortProduct):
-    additional_content: str = ""
+class UpdateProduct(UnspecifiedModel):
     id: int
+    name: str = None
+    sig_install_limit: int | None = None
+    sig_sessions_limit: int | None = None
+    sig_period: int | None = None
+    additional_content: str | None = None
 
 
 class GetProduct(ShortProduct):
@@ -62,9 +82,11 @@ class AddSignature(BaseModel):
     activate: bool = False
 
 
-class UpdateSignature(ShortSignature):
-    license_key: str
-    additional_content: str
+class UpdateSignature(UnspecifiedModel):
+    id: int
+    comment: str = None
+    license_key: str = None
+    additional_content: str = None
 
 
 class ProductsLimitOffset(BaseModel):

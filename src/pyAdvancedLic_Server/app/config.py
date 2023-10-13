@@ -8,7 +8,7 @@ DB_HOST = environ.get('DB_HOST')
 DB_USER = environ.get('DB_USER')
 DB_PASSWORD = environ.get('DB_PASSWORD')
 DB_NAME = environ.get('DB_NAME')
-ACCESS_TOKEN = environ.get('ACCESS_TOKEN')
+ACCESS_TOKEN = '123'
 
 REDIS_HOST = environ.get('REDIS_HOST')
 REDIS_PORT = int(environ.get('REDIS_PORT'))
