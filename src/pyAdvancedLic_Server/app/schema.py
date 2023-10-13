@@ -168,8 +168,8 @@ class AddUser(BaseModel):
     permissions: str
 
 
-class UpdateUser(BaseModel):
+class UpdateUser(UnspecifiedModel):
     id: int
-    username: str
-    permissions: str
-    password: str
+    username: str = None
+    permissions: str = None
+    password: str = None

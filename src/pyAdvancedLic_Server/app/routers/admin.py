@@ -332,12 +332,15 @@ async def update_user(payload: schema.UpdateUser,
     current_user_in_db = await _get_user(current_user, session)
     if not current_user_in_db.get_verifiable_permissions().able_edit_user(u, payload.permissions):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You have no permission")
-    r = await session.execute(select(models.User).filter_by(username=payload.username))
-    if r.scalar_one_or_none() is not None:
-        raise HTTPException(status_code=409, detail="User with specified username already exists")
-    u.username = payload.username
-    u.hashed_password = auth.get_password_hash(payload.password)
-    u.permissions = payload.permissions
+    if 'username' not in payload.unspecified_fields:
+        r = await session.execute(select(models.User).filter_by(username=payload.username))
+        if r.scalar_one_or_none() is not None:
+            raise HTTPException(status_code=409, detail="User with specified username already exists")
+        u.username = payload.username
+    if 'password' not in payload.unspecified_fields:
+        u.hashed_password = auth.get_password_hash(payload.password)
+    if 'permissions' not in payload.unspecified_fields:
+        u.permissions = payload.permissions
     await session.commit()
     await session.refresh(u)
     return schema.ExpandedUser(id=u.id, username=u.username, master_id=u.master_id, permissions=u.permissions)
