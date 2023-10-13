@@ -19,12 +19,12 @@ lm = LicenseManager("https://LICENSE_SERVER_URL.ORG", ssl_public_key='./trusted_
 def my_program():
     print("Access granted!")
     time.sleep(30)
-    lm.end_session()
 
 
 key = input("Enter your license key: ")
 if lm.check_key(key):
     my_program()
+    lm.end_session()
 else:
     print("Access denied:", lm.status)
 ```
@@ -41,11 +41,15 @@ Firstly make an SSL certificate (and private key) for web server and place it to
 
 ```
 
-You can create self-signed one by executing next command and typing your IP or domain in `Common name` row:
+You can create self-signed one by executing next command with _YOUR_IP_ replaced with your external IP.
 
 ```shell
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/lic_server/key.key -out /etc/ssl/lic_server/cert.crt
+openssl req -x509 -newkey rsa:2048 -sha256 -days 3650 -nodes -keyout example.com.key -out example.com.crt -subj "/CN=YOUR_IP" \
+  -addext "subjectAltName=IP:YOUR_IP"
 ```
+
+* If you are using domain name you should specify it instead of IP. In _subjectAltName_ set `DNS` value instead of `IP`
 
 Then setup server using docker-compose
 

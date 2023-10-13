@@ -10,7 +10,7 @@ services:
       DB_PASSWORD: "db_password"
       DB_NAME: advanced_lic
 
-      ACCESS_TOKEN: "access_token"
+      SECRET_KEY: "8e0fb2cd6ad5b277d6f24def8c2f2f62dff9a9c0996d4c44d957419cea5b1dc2"
 
       REDIS_HOST: redis
       REDIS_PORT: 6379
