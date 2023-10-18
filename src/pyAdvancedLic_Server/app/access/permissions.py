@@ -1,6 +1,7 @@
 from ..db import models
 
 DEFAULT_PERMISSIONS = "manage_own_products,manage_own_users"
+SUPERUSER = "superuser"
 
 
 class InvalidPermissionsString(Exception):
