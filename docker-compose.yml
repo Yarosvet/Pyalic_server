@@ -1,4 +1,4 @@
-version: "1.0"
+version: "3.8"
 
 services:
   lic_server:
@@ -24,14 +24,16 @@ services:
     expose:
       - 8000
     depends_on:
-      - postgresql
-      - redis
+      postgresql:
+        condition: service_healthy
+      redis:
+        condition: service_started
 
   nginx:
     build: src/nginx
     ports:
-      - 80:80
-      - 443:443
+      - "8000:80"
+      - "5443:443"
     depends_on:
       - lic_server
     volumes:
@@ -47,6 +49,11 @@ services:
       POSTGRES_USER: lic_server
       POSTGRES_PASSWORD: "db_password"
       POSTGRES_DB: advanced_lic
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U lic_server -d advanced_lic" ]
+      timeout: 5s
+      interval: 2s
+      retries: 3
 
   redis:
     image: "redis:alpine"
