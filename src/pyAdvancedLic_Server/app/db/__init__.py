@@ -2,9 +2,11 @@ from sqlalchemy.ext.asyncio import create_async_engine
 import sqlalchemy.orm as orm
 from sqlalchemy.ext.asyncio import AsyncSession
 import sqlalchemy.ext.declarative as dec
+from typing import AsyncIterator
 
 SqlAlchemyBase = dec.declarative_base()
 
+engine = None
 __factory = None
 
 
@@ -17,6 +19,7 @@ async def global_init(user, password, hostname, db_name):
     :param db_name: Name of DB
     """
     global __factory
+    global engine
     if __factory:
         return
     conn_str = f'postgresql+asyncpg://{user}:{password}@{hostname}/{db_name}'
@@ -27,7 +30,7 @@ async def global_init(user, password, hostname, db_name):
         await conn.run_sync(SqlAlchemyBase.metadata.create_all)
 
 
-async def create_session() -> AsyncSession:
+async def create_session() -> AsyncIterator[AsyncSession]:
     global __factory
     async with __factory() as session:
         yield session
