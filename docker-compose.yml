@@ -4,21 +4,22 @@ services:
   lic_server:
     build: src/pyAdvancedLic_Server
     command: gunicorn -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000 app:app
+    env_file: .env
     environment:
       DB_HOST: postgresql:5432
       DB_USER: lic_server
-      DB_PASSWORD: "db_password"
+      DB_PASSWORD: "${DB_PASSWORD:-db_password}"
       DB_NAME: advanced_lic
 
-      SECRET_KEY: "8e0fb2cd6ad5b277d6f24def8c2f2f62dff9a9c0996d4c44d957419cea5b1dc2"
+      SECRET_KEY: "${SECRET_KEY:-8e0fb2cd6ad5b277d6f24def8c2f2f62dff9a9c0996d4c44d957419cea5b1dc2}"
 
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: "redis_password"
+      REDIS_PASSWORD: "${REDIS_PASSWORD:-redis_password}"
       REDIS_DB: 1
 
-      DEFAULT_USER: "user"
-      DEFAULT_PASSWORD: "changeme"
+      DEFAULT_USER: "${DEFAULT_USER:-user}"
+      DEFAULT_PASSWORD: "${DEFAULT_PASSWORD:-changeme}"
 
       SESSION_ALIVE_PERIOD: 4
     expose:
@@ -45,9 +46,10 @@ services:
       - 5432
     volumes:
       - postgres_data:/var/lib/postgresql/data/
+    env_file: .env
     environment:
       POSTGRES_USER: lic_server
-      POSTGRES_PASSWORD: "db_password"
+      POSTGRES_PASSWORD: "${DB_PASSWORD:-db_password}"
       POSTGRES_DB: advanced_lic
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U lic_server -d advanced_lic" ]
@@ -62,7 +64,10 @@ services:
     restart: always
     volumes:
       - redis_data:/data
-    command: redis-server --save 1 30 --loglevel warning --requirepass "redis_password"
+    env_file: .env
+    environment:
+      REDIS_PASSWORD: "${REDIS_PASSWORD:-redis-password}"
+    command: redis-server --save 1 30 --loglevel warning --requirepass "${REDIS_PASSWORD}"
 
 volumes:
   postgres_data:

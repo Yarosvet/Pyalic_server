@@ -1,2 +1,2 @@
-/src/pyAdvancedLic_Server/*.env
+*.env
 /lic_server.log*
