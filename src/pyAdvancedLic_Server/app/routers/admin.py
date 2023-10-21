@@ -4,6 +4,7 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 from datetime import timedelta, datetime
 from fastapi.security import OAuth2PasswordRequestForm
+from copy import copy
 
 from .. import schema, config
 from ..db import create_session, models
@@ -90,15 +91,15 @@ async def update_product(payload: schema.UpdateProduct,
     if not user_in_db.get_verifiable_permissions().able_edit_product(p):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You have no permission")
     if 'name' not in payload.unspecified_fields:
-        p.name = payload.name
+        p.name = copy(payload.name)
     if 'sig_install_limit' not in payload.unspecified_fields:
-        p.sig_install_limit = payload.sig_install_limit
+        p.sig_install_limit = copy(payload.sig_install_limit)
     if 'sig_sessions_limit' not in payload.unspecified_fields:
-        p.sig_sessions_limit = payload.sig_sessions_limit
+        p.sig_sessions_limit = copy(payload.sig_sessions_limit)
     if 'sig_period' not in payload.unspecified_fields:
         p.sig_period = timedelta(seconds=payload.sig_period) if payload.sig_period is not None else None
     if 'additional_content' not in payload.unspecified_fields:
-        p.additional_content = payload.additional_content
+        p.additional_content = copy(payload.additional_content)
     await session.commit()
     await session.refresh(p)
     sig_period = p.sig_period.total_seconds() if p.sig_period is not None else None
@@ -225,11 +226,11 @@ async def update_signature(payload: schema.UpdateSignature,
     if not user_in_db.get_verifiable_permissions().able_edit_product(sig.product):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You have no permission")
     if 'license_key' not in payload.unspecified_fields:
-        sig.license_key = payload.license_key
+        sig.license_key = copy(payload.license_key)
     if 'comment' not in payload.unspecified_fields:
-        sig.comment = payload.comment
+        sig.comment = copy(payload.comment)
     if 'additional_content' not in payload.unspecified_fields:
-        sig.additional_content = payload.additional_content
+        sig.additional_content = copy(payload.additional_content)
     await session.commit()
     await session.refresh(sig)
     act_date = None if sig.activation_date is None else sig.activation_date.isoformat()
@@ -336,11 +337,11 @@ async def update_user(payload: schema.UpdateUser,
         r = await session.execute(select(models.User).filter_by(username=payload.username))
         if r.scalar_one_or_none() is not None:
             raise HTTPException(status_code=409, detail="User with specified username already exists")
-        u.username = payload.username
+        u.username = copy(payload.username)
     if 'password' not in payload.unspecified_fields:
         u.hashed_password = auth.get_password_hash(payload.password)
     if 'permissions' not in payload.unspecified_fields:
-        u.permissions = payload.permissions
+        u.permissions = copy(payload.permissions)
     await session.commit()
     await session.refresh(u)
     return schema.ExpandedUser(id=u.id, username=u.username, master_id=u.master_id, permissions=u.permissions)
