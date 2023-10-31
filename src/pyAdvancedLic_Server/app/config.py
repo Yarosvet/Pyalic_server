@@ -22,3 +22,5 @@ ACCESS_TOKEN_EXPIRE_MINUTES = environ.get('ACCESS_TOKEN_EXPIRE_MINUTES', default
 
 DEFAULT_USER = environ.get('DEFAULT_USER')
 DEFAULT_PASSWORD = environ.get('DEFAULT_PASSWORD')
+
+LOGGING_ENABLED = bool(int(environ.get('LOGGING_ENABLED', default=1)))
