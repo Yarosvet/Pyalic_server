@@ -1,5 +1,4 @@
 from fastapi.testclient import TestClient
-import httpx
 
 from src.pyAdvancedLic_Server.app import app, config
 
