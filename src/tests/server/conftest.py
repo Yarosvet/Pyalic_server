@@ -4,7 +4,7 @@ import time
 
 from src.pyAdvancedLic_Server.app import config, app
 
-from . import load_db_state, save_db_state
+from . import load_db_state, save_db_state, clean_db
 
 
 @pytest.fixture(scope="session")
@@ -18,6 +18,12 @@ def client():
 @pytest.fixture(scope="function")
 def rebuild_db():
     load_db_state()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def clean_db_on_finish():
+    yield
+    clean_db()
 
 
 @pytest.fixture(scope="class")
