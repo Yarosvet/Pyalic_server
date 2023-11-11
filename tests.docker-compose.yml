@@ -1,0 +1,59 @@
+version: "3.8"
+
+services:
+  test_lic_server:
+    build:
+      context: ./
+      dockerfile: ./src/tests/Dockerfile
+    command: python3 run_tests.py
+
+    env_file: .env
+    environment:
+      DB_HOST: postgresql:5432
+      DB_USER: lic_server
+      DB_PASSWORD: "${DB_PASSWORD:-db_password}"
+      DB_NAME: advanced_lic
+
+      SECRET_KEY: "${SECRET_KEY:-8e0fb2cd6ad5b277d6f24def8c2f2f62dff9a9c0996d4c44d957419cea5b1dc2}"
+
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: "${REDIS_PASSWORD:-redis_password}"
+      REDIS_DB: 1
+
+      DEFAULT_USER: "${DEFAULT_USER:-user}"
+      DEFAULT_PASSWORD: "${DEFAULT_PASSWORD:-changeme}"
+
+      SESSION_ALIVE_PERIOD: 4
+    expose:
+      - 8000
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  postgresql:
+    image: "postgres:15-alpine"
+    expose:
+      - 5432
+    env_file: .env
+    environment:
+      POSTGRES_USER: lic_server
+      POSTGRES_PASSWORD: "${DB_PASSWORD:-db_password}"
+      POSTGRES_DB: advanced_lic
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U lic_server -d advanced_lic" ]
+      timeout: 5s
+      interval: 2s
+      retries: 3
+
+  redis:
+    image: "redis:alpine"
+    expose:
+      - 6379
+    restart: always
+    env_file: .env
+    environment:
+      REDIS_PASSWORD: "${REDIS_PASSWORD:-redis-password}"
+    command: redis-server --save 1 30 --loglevel warning --requirepass "${REDIS_PASSWORD}"
