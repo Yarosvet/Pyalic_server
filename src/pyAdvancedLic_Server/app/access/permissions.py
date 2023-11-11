@@ -19,12 +19,12 @@ class Permissions:
         :param s: Permissions string
         """
         self._validate(s)
-        self._permissions = s.split(',')
+        self._permissions = [el.strip() for el in s.split(',') if el.strip()]
 
     @staticmethod
     def _validate(s: str):
         for el in s.split(','):
-            if el not in ALL_PERMISSIONS:
+            if el and el not in ALL_PERMISSIONS:
                 raise InvalidPermissionsString(el)
 
     def __str__(self) -> str:
@@ -87,7 +87,7 @@ class VerifiablePermissions(Permissions):
         for p in perm_obj:
             if p not in self._u.get_permissions() and not self.is_superuser():
                 return False
-        return self.can_manage_own_users()
+        return self.can_create_users()
 
     def able_edit_user(self, u: 'models.User', permissions: str | None = None) -> bool:
         if permissions is not None:
