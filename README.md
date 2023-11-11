@@ -3,12 +3,15 @@
 Licensing server which allows you to manage access to your products
 
 # Install python API wrapper
+
 Install package using `pip` from this GitHub repository
+
 ```shell
 pip install git+https://github.com/Yarosvet/pyAdvancedLic#subdirectory=src/pyAdvanced_license
 ```
 
 # Python example
+
 ```python
 from pyAdvanced_license import LicenseManager
 import time
@@ -62,3 +65,14 @@ And you already have it launched! If you want to start it in detached mode add `
 ```shell
 docker compose -d up
 ```
+
+# Run tests
+
+There is a Dockerfile for running tests in Docker. So you can run following:
+
+```shell
+docker compose -f tests.docker-compose.yml up --build --exit-code-from test_lic_server
+```
+
+Or if you want to run tests without docker, you must install requirements from `src/tests/requirements.txt`.
+Then place `src/tests/run_tests.py` to the root folder of project and run it.
