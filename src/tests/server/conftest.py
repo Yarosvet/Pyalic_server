@@ -1,6 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 import time
+from redis import Redis
 
 from src.pyAdvancedLic_Server.app import config, app
 
@@ -16,17 +17,25 @@ def client() -> TestClient:
 
 
 @pytest.fixture(scope="function")
-def rebuild_db():
+def rebuild_db(redis_client):
+    redis_client.flushall()
     clean_db()
     fill_db()
     load_db_state()
 
 
+@pytest.fixture(scope="session")
+def redis_client():
+    with Redis(config.REDIS_HOST, config.REDIS_PORT, config.REDIS_DB, config.REDIS_PASSWORD) as r:
+        yield r
+
+
 @pytest.fixture(scope="session", autouse=True)
-def clean_db_on_start_and_finish():
+def clean_db_on_start_and_finish(redis_client):
     clean_db()
     yield
     clean_db()
+    redis_client.flushall()
 
 
 @pytest.fixture(scope="class")
