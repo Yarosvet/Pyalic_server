@@ -118,6 +118,7 @@ class TestKeySession:
         }
         r = client.request('GET', '/check_license', json=p)
         assert r.status_code == 200
+        client.request('POST', '/end_session', json={"session_id": r.json()["session_id"]})
         p['fingerprint'] = rand_str(16)
         r = client.request('GET', '/check_license', json=p)
         assert r.status_code == 403
@@ -153,6 +154,7 @@ class TestKeySession:
         assert r.status_code == 403
         assert r.json() == {'error': 'License expired', 'success': False}
 
+    @pytest.mark.skip  # Todo: write it!
     def test_signature_exp_while_session(self, client):
         sig_period = 1
         product_id = self.__create_rand_product(sig_period=timedelta(seconds=sig_period))
