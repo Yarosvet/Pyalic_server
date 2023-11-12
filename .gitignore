@@ -1,2 +1,2 @@
 *.env
-/lic_server.log*
+lic_server.log*
