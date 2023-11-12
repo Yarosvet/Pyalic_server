@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
@@ -24,7 +25,8 @@ async def check_license(payload: schema.CheckLicense, session: AsyncSession = De
         return schema.GoodLicense(session_id=error_or_sid, additional_content_signature=sig.additional_content,
                                   additional_content_product=sig.product.additional_content)
     await logger.warning(f"Access denied (key={payload.license_key}), message: {error_or_sid}")
-    return schema.BadLicense(error=error_or_sid)
+    resp = schema.BadLicense(error=error_or_sid)
+    return JSONResponse(content=resp.dict(), status_code=403)
 
 
 @router.post("/keepalive", response_model=schema.Successful)
