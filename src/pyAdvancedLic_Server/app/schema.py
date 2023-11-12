@@ -77,8 +77,8 @@ class GetSignature(ShortSignature):
 class AddSignature(BaseModel):
     product_id: int
     license_key: str
-    additional_content: str
-    comment: str
+    additional_content: str = ""
+    comment: str = ""
     activate: bool = False
 
 
