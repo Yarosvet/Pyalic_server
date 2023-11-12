@@ -11,14 +11,15 @@ class SessionNotFoundException(Exception):
     pass
 
 
-def _random_session_id(signature_id: int):
-    return f"{str(signature_id)}:" + "".join([random.choice(ascii_letters + digits) for _ in range(32)])
+def _random_session_id(signature_id: int, signature_ends: int):
+    return f"{str(signature_id)}:{signature_ends}:" + "".join(
+        [random.choice(ascii_letters + digits) for _ in range(32)])
 
 
-async def create_session(signature_id: int) -> str:
-    session_id = _random_session_id(signature_id)
+async def create_session(signature_id: int, signature_ends: int) -> str:
+    session_id = _random_session_id(signature_id, signature_ends)
     while await redis.exists(session_id):
-        session_id = _random_session_id(signature_id)
+        session_id = _random_session_id(signature_id, signature_ends)
     await redis.set(session_id, datetime.utcnow().isoformat())
     await logger.info(f"Created new session {session_id}")
     return session_id
@@ -39,15 +40,16 @@ async def end_session(session_id: str):
 
 async def search_sessions(signature_id: int) -> list[str]:
     res = []
-    async for session_id in redis.scan_iter(match=f"{signature_id}:*"):
+    async for session_id in redis.scan_iter(match=f"{signature_id}:*:*"):
         res.append(session_id)
     return res
 
 
 async def clean_expired_sessions():
-    async for session_id in redis.scan_iter(match="*:*"):
+    async for session_id in redis.scan_iter(match="*:*:*"):
         last_keepalive_str = await redis.get(session_id)
-        if (datetime.utcnow() - datetime.fromisoformat(last_keepalive_str.decode('utf-8'))).total_seconds() \
-                >= config.SESSION_ALIVE_PERIOD:
+        delta_alive = (datetime.utcnow() - datetime.fromisoformat(last_keepalive_str.decode('utf-8'))).total_seconds()
+        signature_ends = datetime.fromtimestamp(int(session_id.decode('utf-8').split(":")[1]))
+        if delta_alive >= config.SESSION_ALIVE_PERIOD or signature_ends < datetime.utcnow():
             await redis.delete(session_id)
             await logger.info(f"Session {session_id} cleaned because of inactivity")
