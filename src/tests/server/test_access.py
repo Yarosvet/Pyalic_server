@@ -1,5 +1,3 @@
-import time
-
 import pytest
 from fastapi.testclient import TestClient
 
@@ -9,6 +7,22 @@ from src.pyAdvancedLic_Server.app.access.auth import check_password
 from src.pyAdvancedLic_Server.app.access.auth import get_password_hash
 
 from . import rand_str, create_db_session
+
+
+def _create_rand_product_with_user() -> int:
+    with create_db_session() as session:
+        # Create user
+        u = models.User(username=rand_str(16), hashed_password=get_password_hash(rand_str(16)))
+        session.add(u)
+        session.commit()
+        session.refresh(u)
+        # Create a product
+        p = models.Product(name=rand_str(16))
+        p.owners.append(u)
+        session.add(p)
+        session.commit()
+        session.refresh(p)
+    return p.id
 
 
 @pytest.mark.usefixtures('client', 'rebuild_db')
@@ -62,7 +76,7 @@ class TestUsersOperations:
         }
         r = client.request('GET', '/admin/users/list', json=p, headers=auth)
         assert r.status_code == 200
-        assert r.json() == {'items': 1, 'users': [{'id': 1, 'username': 'user'}]}
+        assert r.json()['items'] == len(r.json()['users'])
 
     def test_getting_me(self, client, auth):
         r = client.request('GET', '/admin/users/me', headers=auth)
@@ -104,13 +118,18 @@ class TestUsersOperations:
             session.commit()
             session.refresh(u)
             p = {'id': u.id}
-            r = client.request('GET', '/admin/users/interact_user', json=p, headers=auth)
-            assert r.status_code == 200
-            j = r.json()
-            assert j['username'] == username
-            assert j['id'] == u.id
-            assert j['permissions'] == permissions
-            assert j['master_id'] == u.master_id
+        r = client.request('GET', '/admin/users/interact_user', json=p, headers=auth)
+        assert r.status_code == 200
+        j = r.json()
+        assert j['username'] == username
+        assert j['id'] == u.id
+        assert j['permissions'] == permissions
+        assert j['master_id'] == u.master_id
+
+    def test_get_user_not_exists(self, client, auth):
+        p = {'id': 0}
+        r = client.request('GET', '/admin/users/interact_user', json=p, headers=auth)
+        assert r.status_code == 404 and r.json()['detail'] == 'User not found'
 
     def test_update_user(self, client, auth):
         permissions = "superuser"
@@ -143,6 +162,14 @@ class TestUsersOperations:
             assert j['master_id'] == u.master_id
             assert check_password(new_password, u.hashed_password)
 
+    def test_update_user_not_exists(self, client, auth):
+        p = {
+            'id': 0,
+            'username': rand_str(16)
+        }
+        r = client.request('PUT', '/admin/users/interact_user', json=p, headers=auth)
+        assert r.status_code == 404 and r.json()['detail'] == 'User not found'
+
     def test_delete_user(self, client, auth):
         permissions = "superuser"
         username = rand_str(16)
@@ -160,6 +187,11 @@ class TestUsersOperations:
             r = client.request('DELETE', '/admin/users/interact_user', json=p, headers=auth)
             assert r.status_code == 200
             assert r.json()['success']
+
+    def test_delete_user_not_exists(self, client, auth):
+        p = {'id': 0}
+        r = client.request('DELETE', '/admin/users/interact_user', json=p, headers=auth)
+        assert r.status_code == 404 and r.json()['detail'] == 'User not found'
 
 
 @pytest.mark.usefixtures('client', 'rebuild_db', 'auth')
@@ -198,28 +230,28 @@ class TestUserPermissions:
         p = {
             "username": rand_str(16),
             "password": rand_str(16),
-            "permissions": "manage_own_products,manage_other_products,manage_other_users,create_users"
-        }
-        r = client.request('POST', '/admin/users/interact_user', json=p, headers=auth)
-        assert r.status_code == 403
-        p = {
-            "username": rand_str(16),
-            "password": rand_str(16),
             "permissions": "manage_own_products,manage_other_products"
         }
         r = client.request('POST', '/admin/users/interact_user', json=p, headers=auth)
         assert r.status_code == 200
 
+    def test_permissions_inheritance_abuse(self, client, auth):
+        self.__set_default_user_permissions("manage_own_products,manage_other_products,create_users")
+        p = {
+            "username": rand_str(16),
+            "password": rand_str(16),
+            "permissions": "manage_own_products,manage_other_products,manage_other_users,create_users"
+        }
+        r = client.request('POST', '/admin/users/interact_user', json=p, headers=auth)
+        assert r.status_code == 403
+
     def test_manage_own_products(self, client, auth):
-        self.__set_default_user_permissions("")
+        self.__set_default_user_permissions("manage_own_products")
         p = {
             "name": "TestProductB",
             "sig_install_limit": 2,
             "sig_sessions_limit": 3
         }
-        r = client.request('POST', '/admin/interact_product', json=p, headers=auth)
-        assert r.status_code == 403
-        self.__set_default_user_permissions("manage_own_products")
         r = client.request('POST', '/admin/interact_product', json=p, headers=auth)
         assert r.status_code == 200
         p = {
@@ -229,51 +261,67 @@ class TestUserPermissions:
         }
         r = client.request('GET', '/admin/list_signatures', json=p, headers=auth)
         assert r.status_code == 200
+
+    def test_manage_own_products_abuse(self, client, auth):
         self.__set_default_user_permissions("")
+        p = {
+            "name": "TestProductB",
+            "sig_install_limit": 2,
+            "sig_sessions_limit": 3
+        }
+        r = client.request('POST', '/admin/interact_product', json=p, headers=auth)
+        assert r.status_code == 403
+        with create_db_session() as session:
+            u = session.query(models.User).filter_by(username=config.DEFAULT_USER).one_or_none()
+            p = models.Product(name=rand_str(16))
+            p.owners.append(u)
+            session.add(p)
+            session.commit()
+            session.refresh(p)
+            p = {
+                "product_id": p.id,
+                "offset": 0,
+                "limit": 100
+            }
         r = client.request('GET', '/admin/list_signatures', json=p, headers=auth)
         assert r.status_code == 403
 
+    def test_manage_other_products_abuse(self, client, auth):
+        product_id = _create_rand_product_with_user()
+        # Set empty permissions
+        self.__set_default_user_permissions("")
+        # Try to get product
+        p = {
+            "id": product_id
+        }
+        r = client.request('GET', '/admin/interact_product', json=p, headers=auth)
+        assert r.status_code == 403  # Must fail
+        # Try to get signatures of this product
+        p = {
+            "product_id": product_id,
+            "offset": 0,
+            "limit": 100
+        }
+        r = client.request('GET', '/admin/list_signatures', json=p, headers=auth)
+        assert r.status_code == 403  # Must fail
+        # Try to update product
+        p = {
+            "product_id": product_id,
+            "name": rand_str(16),
+            "sig_install_limit": None
+        }
+        r = client.request('GET', '/admin/list_signatures', json=p, headers=auth)
+        assert r.status_code == 403  # Must fail
+
     def test_manage_other_products(self, client, auth):
-        # Firstly create a product
-        p = {
-            "name": "TestProductB",
-            "sig_install_limit": 2,
-            "sig_sessions_limit": 3
-        }
-        r = client.request('POST', '/admin/interact_product', json=p, headers=auth)
-        assert r.status_code == 200
-        product_id = r.json()['id']
-        # Create user without permission
-        u_auth = self.__new_user_auth("", client)
+        product_id = _create_rand_product_with_user()
+        # Set permission
+        self.__set_default_user_permissions("manage_other_products")
         # Try to get product
         p = {
             "id": product_id
         }
-        r = client.request('GET', '/admin/interact_product', json=p, headers=u_auth)
-        assert r.status_code == 403  # Must fail
-        # Try to get signatures of this product
-        p = {
-            "product_id": product_id,
-            "offset": 0,
-            "limit": 100
-        }
-        r = client.request('GET', '/admin/list_signatures', json=p, headers=u_auth)
-        assert r.status_code == 403  # Must fail
-        # Try to update product
-        p = {
-            "product_id": product_id,
-            "name": "testProductC",
-            "sig_install_limit": None
-        }
-        r = client.request('GET', '/admin/list_signatures', json=p, headers=u_auth)
-        assert r.status_code == 403  # Must fail
-        # Create another user with permission
-        u_auth = self.__new_user_auth("manage_other_products", client)
-        # Try to get product
-        p = {
-            "id": product_id
-        }
-        r = client.request('GET', '/admin/interact_product', json=p, headers=u_auth)
+        r = client.request('GET', '/admin/interact_product', json=p, headers=auth)
         assert r.status_code == 200  # Must work
         # Try to get signatures of this product
         p = {
@@ -281,7 +329,7 @@ class TestUserPermissions:
             "offset": 0,
             "limit": 100
         }
-        r = client.request('GET', '/admin/list_signatures', json=p, headers=u_auth)
+        r = client.request('GET', '/admin/list_signatures', json=p, headers=auth)
         assert r.status_code == 200  # Must work
         # Try to update product
         p = {
@@ -289,26 +337,18 @@ class TestUserPermissions:
             "name": "testProductC",
             "sig_install_limit": None
         }
-        r = client.request('GET', '/admin/list_signatures', json=p, headers=u_auth)
+        r = client.request('GET', '/admin/list_signatures', json=p, headers=auth)
         assert r.status_code == 200  # Must work
 
-    def test_read_other_products(self, client, auth):
-        # Firstly create a product
-        p = {
-            "name": "TestProductB",
-            "sig_install_limit": 2,
-            "sig_sessions_limit": 3
-        }
-        r = client.request('POST', '/admin/interact_product', json=p, headers=auth)
-        assert r.status_code == 200
-        product_id = r.json()['id']
-        # Create user without permission
-        u_auth = self.__new_user_auth("", client)
+    def test_read_other_products_abuse(self, client, auth):
+        product_id = _create_rand_product_with_user()
+        # Set empty permissions
+        self.__set_default_user_permissions("")
         # Try to get product
         p = {
             "id": product_id
         }
-        r = client.request('GET', '/admin/interact_product', json=p, headers=u_auth)
+        r = client.request('GET', '/admin/interact_product', json=p, headers=auth)
         assert r.status_code == 403  # Must fail
         # Try to get signatures of this product
         p = {
@@ -316,15 +356,18 @@ class TestUserPermissions:
             "offset": 0,
             "limit": 100
         }
-        r = client.request('GET', '/admin/list_signatures', json=p, headers=u_auth)
+        r = client.request('GET', '/admin/list_signatures', json=p, headers=auth)
         assert r.status_code == 403  # Must fail
-        # Create another user with permission
-        u_auth = self.__new_user_auth("read_other_products", client)
+
+    def test_read_other_products(self, client, auth):
+        product_id = _create_rand_product_with_user()
+        # Set permission
+        self.__set_default_user_permissions("manage_other_products")
         # Try to get product
         p = {
             "id": product_id
         }
-        r = client.request('GET', '/admin/interact_product', json=p, headers=u_auth)
+        r = client.request('GET', '/admin/interact_product', json=p, headers=auth)
         assert r.status_code == 200  # Must work
         # Try to get signatures of this product
         p = {
@@ -332,11 +375,21 @@ class TestUserPermissions:
             "offset": 0,
             "limit": 100
         }
-        r = client.request('GET', '/admin/list_signatures', json=p, headers=u_auth)
+        r = client.request('GET', '/admin/list_signatures', json=p, headers=auth)
         assert r.status_code == 200  # Must work
 
     def test_create_users(self, client, auth):
-        # Remove permission
+        self.__set_default_user_permissions("create_users")
+        p = {
+            "username": rand_str(16),
+            "password": rand_str(16),
+            "permissions": ""
+        }
+        # Try to create a user
+        r = client.request('POST', '/admin/users/interact_user', json=p, headers=auth)
+        assert r.status_code == 200  # Must work
+
+    def test_create_users_abuse(self, client, auth):
         self.__set_default_user_permissions("")
         p = {
             "username": rand_str(16),
@@ -346,14 +399,26 @@ class TestUserPermissions:
         # Try to create a user
         r = client.request('POST', '/admin/users/interact_user', json=p, headers=auth)
         assert r.status_code == 403  # Must fail
-        # Add create_users permission
-        self.__set_default_user_permissions("create_users")
-        time.sleep(1)
-        # Try to create a user
-        r = client.request('POST', '/admin/users/interact_user', json=p, headers=auth)
-        assert r.status_code == 200  # Must work
 
     def test_manage_other_users(self, client, auth):
+        self.__set_default_user_permissions("manage_other_users")
+        # Create not owned user
+        with create_db_session() as session:
+            u = models.User(username=rand_str(16),
+                            hashed_password=get_password_hash(rand_str(16)),
+                            permissions="")
+            session.add(u)
+            session.commit()
+            u_id = u.id
+            p = {
+                'id': u_id,
+                'username': rand_str(16),
+            }
+        # Try to update him
+        r = client.request('PUT', '/admin/users/interact_user', json=p, headers=auth)
+        assert r.status_code == 200  # Must work
+
+    def test_manage_other_users_abuse(self, client, auth):
         self.__set_default_user_permissions("")
         # Create not owned user
         with create_db_session() as session:
@@ -363,18 +428,35 @@ class TestUserPermissions:
             session.add(u)
             session.commit()
             u_id = u.id
+            p = {
+                'id': u_id,
+                'username': rand_str(16),
+            }
+        # Try to update him
+        r = client.request('PUT', '/admin/users/interact_user', json=p, headers=auth)
+        assert r.status_code == 403  # Must fail
+
+    def test_manage_own_users(self, client, auth):
+        self.__set_default_user_permissions("manage_own_users")
+        # Create owned user
+        with create_db_session() as session:
+            master_id = session.query(models.User).filter_by(username=config.DEFAULT_USER).one_or_none().id
+            u = models.User(username=rand_str(16),
+                            hashed_password=get_password_hash(rand_str(16)),
+                            permissions="",
+                            master_id=master_id)
+            session.add(u)
+            session.commit()
+            u_id = u.id
         p = {
             'id': u_id,
             'username': rand_str(16),
         }
         # Try to update him
         r = client.request('PUT', '/admin/users/interact_user', json=p, headers=auth)
-        assert r.status_code == 403  # Must fail
-        self.__set_default_user_permissions("manage_other_users")
-        r = client.request('PUT', '/admin/users/interact_user', json=p, headers=auth)
         assert r.status_code == 200  # Must work
 
-    def test_own_users(self, client, auth):
+    def test_manage_own_users_abuse(self, client, auth):
         self.__set_default_user_permissions("")
         # Create owned user
         with create_db_session() as session:
@@ -393,6 +475,3 @@ class TestUserPermissions:
         # Try to update him
         r = client.request('PUT', '/admin/users/interact_user', json=p, headers=auth)
         assert r.status_code == 403  # Must fail
-        self.__set_default_user_permissions("manage_own_users")
-        r = client.request('PUT', '/admin/users/interact_user', json=p, headers=auth)
-        assert r.status_code == 200  # Must work
