@@ -55,5 +55,5 @@ services:
     restart: always
     env_file: .env
     environment:
-      REDIS_PASSWORD: "${REDIS_PASSWORD:-redis-password}"
+      REDIS_PASSWORD: "${REDIS_PASSWORD:-redis_password}"
     command: redis-server --save 1 30 --loglevel warning --requirepass "${REDIS_PASSWORD}"
