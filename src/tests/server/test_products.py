@@ -131,6 +131,44 @@ class TestProductsOperations:
         assert r.status_code == 200
         assert j['name'] == name
 
+    def test_update_product_fill_sequentially(self, client, auth):
+        product_id1, product_name1 = _create_rand_product()
+        product_id2, product_name2 = _create_rand_product()
+        product_id3, product_name3 = _create_rand_product()
+        p1 = {
+            "id": product_id1,
+            "name": rand_str(16),
+            "sig_install_limit": 2,
+            "sig_sessions_limit": 3,
+            "sig_period": 60,
+            "additional_content": rand_str(32)
+        }
+        p2 = {
+            "id": product_id2,
+            "name": rand_str(16)
+        }
+        p3 = {
+            "id": product_id3,
+            "name": rand_str(16),
+            "sig_install_limit": 2,
+            "sig_sessions_limit": 3,
+            "sig_period": 60,
+            "additional_content": rand_str(32)
+        }
+        r = client.request('PUT', '/admin/interact_product', json=p1, headers=auth)
+        assert r.status_code == 200
+        j1 = r.json()
+        r = client.request('PUT', '/admin/interact_product', json=p2, headers=auth)
+        assert r.status_code == 200
+        j2 = r.json()
+        r = client.request('PUT', '/admin/interact_product', json=p3, headers=auth)
+        assert r.status_code == 200
+        j3 = r.json()
+        assert j1['sig_install_limit'] != j2['sig_install_limit'] != j3['sig_install_limit']
+        assert j1['sig_sessions_limit'] != j2['sig_sessions_limit'] != j3['sig_sessions_limit']
+        assert j1['sig_period'] != j2['sig_period'] != j3['sig_period']
+        assert j1['additional_content'] != j2['additional_content'] != j3['additional_content']
+
     def test_update_product_name_exists(self, client, auth):
         product_id, product_name = _create_rand_product()
         another_product_id, another_product_name = _create_rand_product()
@@ -298,9 +336,9 @@ class TestSignaturesOperations:
         r = client.request('PUT', '/admin/interact_signature', json=p, headers=auth)
         assert r.status_code == 200
         j = r.json()
-        assert j['comment'] == comment or True  # Todo: fix and remove 'or True'
+        assert j['comment'] == comment
         assert j['license_key'] == key
-        assert j['additional_content'] == a_content or True  # Todo: fix and remove 'or True'
+        assert j['additional_content'] == a_content
 
     def test_update_signature_only_fields(self, client, auth):
         signature_id = _create_rand_signature()
