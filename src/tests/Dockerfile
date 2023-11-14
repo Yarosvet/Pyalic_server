@@ -2,6 +2,8 @@ FROM python:3.11-alpine
 # Context must be ../../
 WORKDIR /opt/pyAdvancedLic
 
+ENV LOGGING_ENABLED=0
+
 ADD src src/
 ADD src/tests/run_tests.py run_tests.py
 

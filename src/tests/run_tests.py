@@ -1,3 +1,3 @@
 import pytest
 
-pytest.main(['-s', '-p no:warnings'])
+pytest.main(['-p no:warnings'])
