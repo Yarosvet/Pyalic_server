@@ -1,20 +1,31 @@
 from pydantic import BaseModel, root_validator
+from typing import Any
+
+
+# class UnspecifiedModel(BaseModel):
+#     unspecified_fields: list = []
+#
+#     @root_validator(pre=True)
+#     def mark_as_unspecified(cls, values: dict):  # noqa
+#         assert 'unspecified_fields' not in values.keys()
+#         unspecified = []
+#         for field in cls.__fields__:
+#             if field not in values.keys():
+#                 unspecified.append(field)
+#         values['unspecified_fields'] = unspecified
+#         return values
 
 
 class UnspecifiedModel(BaseModel):
-    _unspecified = []
+    __slots__ = ('unspecified_fields',)
 
-    @root_validator(pre=True)
-    def mark_as_unspecified(cls, values: dict):
-        for field in cls.__fields__:
-            print(field)
-            if field not in values.keys():
-                cls._unspecified.append(field)
-        return values
-
-    @property
-    def unspecified_fields(self) -> list[str]:
-        return self._unspecified
+    def __init__(self, **data: Any):
+        super().__init__(**data)
+        unspecified = set()
+        for field in self.__fields__:
+            if field not in data.keys():
+                unspecified.add(field)
+        object.__setattr__(self, 'unspecified_fields', unspecified)
 
 
 class ShortProduct(BaseModel):
