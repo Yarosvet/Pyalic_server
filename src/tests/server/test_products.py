@@ -340,7 +340,6 @@ class TestSignaturesOperations:
         r = client.request('GET', '/admin/interact_signature', json=p, headers=auth)
         assert r.status_code == 404 and r.json() == {'detail': 'Signature not found'}
 
-    @pytest.mark.skip  # Todo: fix
     def test_delete_signature(self, client, auth):
         signature_id = _create_rand_signature()
         p = {
@@ -349,7 +348,6 @@ class TestSignaturesOperations:
         r = client.request('DELETE', '/admin/interact_signature', json=p, headers=auth)
         assert r.status_code == 200 and r.json() == {'success': True}
 
-    @pytest.mark.skip  # Todo: fix
     def test_delete_signature_not_exists(self, client, auth):
         p = {
             "id": 0
@@ -357,7 +355,6 @@ class TestSignaturesOperations:
         r = client.request('DELETE', '/admin/interact_signature', json=p, headers=auth)
         assert r.status_code == 404 and r.json() == {'detail': 'Signature not found'}
 
-    @pytest.mark.skip  # Todo: fix
     def test_delete_signature_with_installations(self, client, auth):
         signature_id = _create_rand_signature()
         with create_db_session() as session:

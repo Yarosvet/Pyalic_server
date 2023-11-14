@@ -257,7 +257,7 @@ async def delete_signature(payload: schema.IdField,
     if sig is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Signature not found")
     r = await session.execute(select(models.Signature).filter_by(id=payload.id)
-                              .options(selectinload(models.Signature.installations).
+                              .options(selectinload(models.Signature.installations),
                                        selectinload(models.Signature.product)))
     sig = r.scalar_one_or_none()
     user_in_db = await _get_user_with_prod(current_user, session)
