@@ -156,7 +156,6 @@ class TestProductsOperations:
         r = client.request('GET', '/admin/interact_product', json=p, headers=auth)
         assert r.status_code == 200 and r.json()['id'] == product_id
 
-    @pytest.mark.skip  # Todo: fix!
     def test_delete_product(self, client, auth):
         product_id, product_name = _create_rand_product()
         p = {
@@ -172,7 +171,6 @@ class TestProductsOperations:
         r = client.request('DELETE', '/admin/interact_product', json=p, headers=auth)
         assert r.status_code == 404 and r.json() == {'detail': 'Product not found'}
 
-    @pytest.mark.skip  # Todo: fix
     def test_delete_product_with_signatures(self, client, auth):
         product_id, product_name = _create_rand_product()
         _create_rand_signature(product_id)

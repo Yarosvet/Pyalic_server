@@ -118,7 +118,7 @@ async def delete_product(payload: schema.IdField,
                          session: AsyncSession = Depends(create_session),
                          current_user: schema.User = Depends(auth.get_current_user)):
     r = await session.execute(select(models.Product).filter_by(id=payload.id).options(
-        selectinload(models.Product.signatures, models.Signature.installations)))
+        selectinload(models.Product.signatures).selectinload(models.Signature.installations)))
     p = r.scalar_one_or_none()
     if p is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
