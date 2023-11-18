@@ -1,6 +1,7 @@
 """
 Test operations with products and all related to it
 """
+from dataclasses import dataclass
 import pytest
 
 from ..app import config
@@ -9,7 +10,13 @@ from ..app.db import models
 from . import rand_str, create_db_session
 
 
-def _create_rand_product() -> tuple[int, str]:
+@dataclass
+class RandProduct:  # pylint: disable=missing-class-docstring
+    id: int
+    name: str
+
+
+def _create_rand_product() -> RandProduct:
     with create_db_session() as session:
         u = session.query(models.User).filter_by(username=config.DEFAULT_USER).one_or_none()
         p = models.Product(name=rand_str(16))
@@ -17,12 +24,12 @@ def _create_rand_product() -> tuple[int, str]:
         session.add(p)
         session.commit()
         session.refresh(p)
-    return p.id, p.name
+    return RandProduct(id=p.id, name=p.name)
 
 
 def _create_rand_signature(product_id: int = None, license_key: str = None) -> int:
     if product_id is None:
-        product_id = _create_rand_product()[0]
+        product_id = _create_rand_product().id
     if license_key is None:
         license_key = rand_str(32)
     with create_db_session() as session:
@@ -97,7 +104,7 @@ class TestProductsOperations:
         assert j['additional_content'] == ""
 
     def test_add_product_name_exists(self, client, auth):
-        product_name = _create_rand_product()[1]
+        product_name = _create_rand_product().name
         p = {
             "name": product_name
         }
@@ -105,7 +112,7 @@ class TestProductsOperations:
         assert r.status_code == 400 and r.json() == {'detail': 'Product with specified name already exists'}
 
     def test_update_product_full_fields(self, client, auth):
-        product_id = _create_rand_product()[0]
+        product_id = _create_rand_product().id
         name = rand_str(16)
         i_limit = 2
         s_limit = 3
@@ -129,7 +136,7 @@ class TestProductsOperations:
         assert j['additional_content'] == a_content
 
     def test_update_product_only_fields(self, client, auth):
-        product_id = _create_rand_product()[0]
+        product_id = _create_rand_product().id
         name = rand_str(16)
         p = {
             "id": product_id,
@@ -142,9 +149,9 @@ class TestProductsOperations:
 
     def test_update_product_fill_sequentially(self, client, auth):
         """By the fact it tests `UnspecifiedModel` schema. It mustn't store any values of another instance."""
-        product_id1 = _create_rand_product()[0]
-        product_id2 = _create_rand_product()[0]
-        product_id3 = _create_rand_product()[0]
+        product_id1 = _create_rand_product().id
+        product_id2 = _create_rand_product().id
+        product_id3 = _create_rand_product().id
         p1 = {
             "id": product_id1,
             "name": rand_str(16),
@@ -180,8 +187,8 @@ class TestProductsOperations:
         assert j1['additional_content'] != j2['additional_content'] != j3['additional_content']
 
     def test_update_product_name_exists(self, client, auth):
-        product_id = _create_rand_product()[0]
-        another_product_name = _create_rand_product()[1]
+        product_id = _create_rand_product().id
+        another_product_name = _create_rand_product().name
         p = {
             "id": product_id,
             "name": another_product_name
@@ -197,7 +204,7 @@ class TestProductsOperations:
         assert r.status_code == 404 and r.json() == {'detail': 'Product not found'}
 
     def test_get_product(self, client, auth):
-        product_id = _create_rand_product()[0]
+        product_id = _create_rand_product().id
         p = {
             "id": product_id
         }
@@ -205,7 +212,7 @@ class TestProductsOperations:
         assert r.status_code == 200 and r.json()['id'] == product_id
 
     def test_delete_product(self, client, auth):
-        product_id = _create_rand_product()[0]
+        product_id = _create_rand_product().id
         p = {
             "id": product_id
         }
@@ -220,7 +227,7 @@ class TestProductsOperations:
         assert r.status_code == 404 and r.json() == {'detail': 'Product not found'}
 
     def test_delete_product_with_signatures(self, client, auth):
-        product_id = _create_rand_product()[0]
+        product_id = _create_rand_product().id
         _create_rand_signature(product_id)
         p = {
             "id": product_id
@@ -235,7 +242,7 @@ class TestSignaturesOperations:
     """
 
     def test_empty_list_signatures(self, client, auth):
-        product_id = _create_rand_product()[0]
+        product_id = _create_rand_product().id
         p = {
             "product_id": product_id,
             "limit": 100,
@@ -247,7 +254,7 @@ class TestSignaturesOperations:
         assert r.json()['product_id'] == product_id
 
     def test_filled_list_signatures(self, client, auth):
-        product_id = _create_rand_product()[0]
+        product_id = _create_rand_product().id
         _create_rand_signature(product_id)
         p = {
             "product_id": product_id,
@@ -268,7 +275,7 @@ class TestSignaturesOperations:
         assert r.status_code == 404 and r.json() == {'detail': 'Product not found'}
 
     def test_add_signature_only_fields(self, client, auth):
-        product_id = _create_rand_product()[0]
+        product_id = _create_rand_product().id
         key = rand_str(32)
         p = {
             "product_id": product_id,
@@ -285,7 +292,7 @@ class TestSignaturesOperations:
         assert j['activation_date'] is None
 
     def test_add_signature_not_activated_full_fields(self, client, auth):
-        product_id = _create_rand_product()[0]
+        product_id = _create_rand_product().id
         key = rand_str(32)
         comment = rand_str(16)
         a_content = rand_str(32)
@@ -307,7 +314,7 @@ class TestSignaturesOperations:
         assert j['activation_date'] is None
 
     def test_add_signature_activated(self, client, auth):
-        product_id = _create_rand_product()[0]
+        product_id = _create_rand_product().id
         p = {
             "product_id": product_id,
             "license_key": rand_str(32),
@@ -319,7 +326,7 @@ class TestSignaturesOperations:
 
     def test_add_signature_already_exists(self, client, auth):
         key = rand_str(32)
-        product_id = _create_rand_product()[0]
+        product_id = _create_rand_product().id
         _create_rand_signature(product_id=product_id, license_key=key)
         p = {
             "product_id": product_id,

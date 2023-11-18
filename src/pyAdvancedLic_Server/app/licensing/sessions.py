@@ -16,7 +16,7 @@ class SessionNotFoundException(Exception):
     """
 
 
-def _random_session_id(signature_id: int, signature_ends: int):
+def _random_session_id(signature_id: int, signature_ends: int) -> str:
     return f"{str(signature_id)}:{signature_ends}:" + "".join(
         [random.choice(ascii_letters + digits) for _ in range(32)])
 

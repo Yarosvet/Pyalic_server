@@ -20,19 +20,19 @@ router = APIRouter()
 async def check_license(payload: schema.CheckLicense, session: AsyncSession = Depends(create_session)):
     """Request handler for checking license and creating a new Session with ID"""
     # Process check request via licensing engine
-    confirmed, error_or_sid = await lic_engine.process_check_request(payload.license_key, payload.fingerprint, session)
-    if confirmed:  # If access granted
+    check_resp = await lic_engine.process_check_request(payload.license_key, payload.fingerprint, session)
+    if check_resp.success:  # If access granted
         # Get signature
         r = await session.execute(select(models.Signature).filter_by(license_key=payload.license_key).options(
             selectinload(models.Signature.product)))
         sig = r.scalar_one_or_none()
         if sig is None:  # If signature not exists
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
-        return schema.GoodLicense(session_id=error_or_sid, additional_content_signature=sig.additional_content,
+        return schema.GoodLicense(session_id=check_resp.session_id, additional_content_signature=sig.additional_content,
                                   additional_content_product=sig.product.additional_content)
     # If something went wrong
-    await logger.warning(f"Access denied (key={payload.license_key}), message: {error_or_sid}")
-    resp = schema.BadLicense(error=error_or_sid)
+    await logger.warning(f"Access denied (key={payload.license_key}), message: {check_resp.error}")
+    resp = schema.BadLicense(error=check_resp.error)
     return JSONResponse(content=resp.dict(), status_code=403)
 
 
