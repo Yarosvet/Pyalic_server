@@ -33,13 +33,15 @@ def _create_rand_signature(product_id: int = None, license_key: str = None) -> i
     return s.id
 
 
+# pylint: disable=C0116
+
 @pytest.mark.usefixtures('client', 'rebuild_db', 'auth')
 class TestProductsOperations:
     """
     Test operations with products
     """
 
-    def test_empty_list_products(self, client, auth):  # pylint: disable=C0116
+    def test_empty_list_products(self, client, auth):
         p = {
             "limit": 100,
             "offset": 0
@@ -48,7 +50,7 @@ class TestProductsOperations:
         assert r.status_code == 200
         assert r.json()['items'] == len(r.json()['products']) == 0
 
-    def test_filled_list_products(self, client, auth):  # pylint: disable=C0116
+    def test_filled_list_products(self, client, auth):
         _create_rand_product()
         p = {
             "limit": 100,
@@ -58,7 +60,7 @@ class TestProductsOperations:
         assert r.status_code == 200
         assert r.json()['items'] == len(r.json()['products']) == 1
 
-    def test_add_product_all_fields(self, client, auth):  # pylint: disable=C0116
+    def test_add_product_all_fields(self, client, auth):
         name = rand_str(16)
         i_limit = 2
         s_limit = 3
@@ -80,7 +82,7 @@ class TestProductsOperations:
         assert j['sig_period'] == s_period
         assert j['additional_content'] == a_content
 
-    def test_add_product_autofill_fields(self, client, auth):  # pylint: disable=C0116
+    def test_add_product_autofill_fields(self, client, auth):
         name = rand_str(16)
         p = {
             "name": name
@@ -94,7 +96,7 @@ class TestProductsOperations:
         assert j['sig_period'] is None
         assert j['additional_content'] == ""
 
-    def test_add_product_name_exists(self, client, auth):  # pylint: disable=C0116
+    def test_add_product_name_exists(self, client, auth):
         product_name = _create_rand_product()[1]
         p = {
             "name": product_name
@@ -102,7 +104,7 @@ class TestProductsOperations:
         r = client.request('POST', '/admin/interact_product', json=p, headers=auth)
         assert r.status_code == 400 and r.json() == {'detail': 'Product with specified name already exists'}
 
-    def test_update_product_full_fields(self, client, auth):  # pylint: disable=C0116
+    def test_update_product_full_fields(self, client, auth):
         product_id = _create_rand_product()[0]
         name = rand_str(16)
         i_limit = 2
@@ -126,7 +128,7 @@ class TestProductsOperations:
         assert j['sig_period'] == s_period
         assert j['additional_content'] == a_content
 
-    def test_update_product_only_fields(self, client, auth):  # pylint: disable=C0116
+    def test_update_product_only_fields(self, client, auth):
         product_id = _create_rand_product()[0]
         name = rand_str(16)
         p = {
@@ -138,7 +140,8 @@ class TestProductsOperations:
         assert r.status_code == 200
         assert j['name'] == name
 
-    def test_update_product_fill_sequentially(self, client, auth):  # pylint: disable=C0116
+    def test_update_product_fill_sequentially(self, client, auth):
+        """By the fact it tests `UnspecifiedModel` schema. It mustn't store any values of another instance."""
         product_id1 = _create_rand_product()[0]
         product_id2 = _create_rand_product()[0]
         product_id3 = _create_rand_product()[0]
@@ -176,7 +179,7 @@ class TestProductsOperations:
         assert j1['sig_period'] != j2['sig_period'] != j3['sig_period']
         assert j1['additional_content'] != j2['additional_content'] != j3['additional_content']
 
-    def test_update_product_name_exists(self, client, auth):  # pylint: disable=C0116
+    def test_update_product_name_exists(self, client, auth):
         product_id = _create_rand_product()[0]
         another_product_name = _create_rand_product()[1]
         p = {
@@ -186,14 +189,14 @@ class TestProductsOperations:
         r = client.request('PUT', '/admin/interact_product', json=p, headers=auth)
         assert r.status_code == 400 and r.json() == {'detail': 'Product with specified name already exists'}
 
-    def test_get_product_not_exists(self, client, auth):  # pylint: disable=C0116
+    def test_get_product_not_exists(self, client, auth):
         p = {
             "id": 0
         }
         r = client.request('GET', '/admin/interact_product', json=p, headers=auth)
         assert r.status_code == 404 and r.json() == {'detail': 'Product not found'}
 
-    def test_get_product(self, client, auth):  # pylint: disable=C0116
+    def test_get_product(self, client, auth):
         product_id = _create_rand_product()[0]
         p = {
             "id": product_id
@@ -201,7 +204,7 @@ class TestProductsOperations:
         r = client.request('GET', '/admin/interact_product', json=p, headers=auth)
         assert r.status_code == 200 and r.json()['id'] == product_id
 
-    def test_delete_product(self, client, auth):  # pylint: disable=C0116
+    def test_delete_product(self, client, auth):
         product_id = _create_rand_product()[0]
         p = {
             "id": product_id
@@ -209,14 +212,14 @@ class TestProductsOperations:
         r = client.request('DELETE', '/admin/interact_product', json=p, headers=auth)
         assert r.status_code == 200 and r.json() == {'success': True}
 
-    def test_delete_product_not_exists(self, client, auth):  # pylint: disable=C0116
+    def test_delete_product_not_exists(self, client, auth):
         p = {
             "id": 0
         }
         r = client.request('DELETE', '/admin/interact_product', json=p, headers=auth)
         assert r.status_code == 404 and r.json() == {'detail': 'Product not found'}
 
-    def test_delete_product_with_signatures(self, client, auth):  # pylint: disable=C0116
+    def test_delete_product_with_signatures(self, client, auth):
         product_id = _create_rand_product()[0]
         _create_rand_signature(product_id)
         p = {
@@ -231,7 +234,7 @@ class TestSignaturesOperations:
     Test operations with signatures
     """
 
-    def test_empty_list_signatures(self, client, auth):  # pylint: disable=C0116
+    def test_empty_list_signatures(self, client, auth):
         product_id = _create_rand_product()[0]
         p = {
             "product_id": product_id,
@@ -243,7 +246,7 @@ class TestSignaturesOperations:
         assert r.json()['items'] == len(r.json()['signatures']) == 0
         assert r.json()['product_id'] == product_id
 
-    def test_filled_list_signatures(self, client, auth):  # pylint: disable=C0116
+    def test_filled_list_signatures(self, client, auth):
         product_id = _create_rand_product()[0]
         _create_rand_signature(product_id)
         p = {
@@ -256,7 +259,7 @@ class TestSignaturesOperations:
         assert r.json()['items'] == len(r.json()['signatures']) == 1
         assert r.json()['product_id'] == product_id
 
-    def test_add_signature_product_not_exists(self, client, auth):  # pylint: disable=C0116
+    def test_add_signature_product_not_exists(self, client, auth):
         p = {
             "product_id": 0,
             "license_key": rand_str(32)
@@ -264,7 +267,7 @@ class TestSignaturesOperations:
         r = client.request('POST', '/admin/interact_signature', json=p, headers=auth)
         assert r.status_code == 404 and r.json() == {'detail': 'Product not found'}
 
-    def test_add_signature_only_fields(self, client, auth):  # pylint: disable=C0116
+    def test_add_signature_only_fields(self, client, auth):
         product_id = _create_rand_product()[0]
         key = rand_str(32)
         p = {
@@ -281,7 +284,7 @@ class TestSignaturesOperations:
         assert j['installed'] == 0
         assert j['activation_date'] is None
 
-    def test_add_signature_not_activated_full_fields(self, client, auth):  # pylint: disable=C0116
+    def test_add_signature_not_activated_full_fields(self, client, auth):
         product_id = _create_rand_product()[0]
         key = rand_str(32)
         comment = rand_str(16)
@@ -303,7 +306,7 @@ class TestSignaturesOperations:
         assert j['installed'] == 0
         assert j['activation_date'] is None
 
-    def test_add_signature_activated(self, client, auth):  # pylint: disable=C0116
+    def test_add_signature_activated(self, client, auth):
         product_id = _create_rand_product()[0]
         p = {
             "product_id": product_id,
@@ -314,7 +317,7 @@ class TestSignaturesOperations:
         assert r.status_code == 200
         assert r.json()['activation_date'] is not None
 
-    def test_add_signature_already_exists(self, client, auth):  # pylint: disable=C0116
+    def test_add_signature_already_exists(self, client, auth):
         key = rand_str(32)
         product_id = _create_rand_product()[0]
         _create_rand_signature(product_id=product_id, license_key=key)
@@ -325,7 +328,7 @@ class TestSignaturesOperations:
         r = client.request('POST', '/admin/interact_signature', json=p, headers=auth)
         assert r.status_code == 400 and r.json() == {'detail': 'Signature with specified license key already exists'}
 
-    def test_update_signature_not_exists(self, client, auth):  # pylint: disable=C0116
+    def test_update_signature_not_exists(self, client, auth):
         p = {
             "id": 0,
             "license_key": rand_str(32),
@@ -333,7 +336,7 @@ class TestSignaturesOperations:
         r = client.request('PUT', '/admin/interact_signature', json=p, headers=auth)
         assert r.status_code == 404 and r.json() == {'detail': 'Signature not found'}
 
-    def test_update_signature_full_fields(self, client, auth):  # pylint: disable=C0116
+    def test_update_signature_full_fields(self, client, auth):
         signature_id = _create_rand_signature()
         key = rand_str(32)
         comment = rand_str(16)
@@ -351,7 +354,7 @@ class TestSignaturesOperations:
         assert j['license_key'] == key
         assert j['additional_content'] == a_content
 
-    def test_update_signature_only_fields(self, client, auth):  # pylint: disable=C0116
+    def test_update_signature_only_fields(self, client, auth):
         signature_id = _create_rand_signature()
         key = rand_str(32)
         p = {
@@ -362,7 +365,7 @@ class TestSignaturesOperations:
         assert r.status_code == 200
         assert r.json()['license_key'] == key
 
-    def test_update_signature_already_exists(self, client, auth):  # pylint: disable=C0116
+    def test_update_signature_already_exists(self, client, auth):
         key = rand_str(32)
         signature_id = _create_rand_signature(license_key=key)
         other_key = rand_str(32)
@@ -374,7 +377,7 @@ class TestSignaturesOperations:
         r = client.request('PUT', '/admin/interact_signature', json=p, headers=auth)
         assert r.status_code == 400 and r.json() == {'detail': 'Signature with specified license key already exists'}
 
-    def test_get_signature(self, client, auth):  # pylint: disable=C0116
+    def test_get_signature(self, client, auth):
         signature_id = _create_rand_signature()
         p = {
             "id": signature_id
@@ -382,14 +385,14 @@ class TestSignaturesOperations:
         r = client.request('GET', '/admin/interact_signature', json=p, headers=auth)
         assert r.status_code == 200 and r.json()['id'] == signature_id
 
-    def test_get_signature_not_exists(self, client, auth):  # pylint: disable=C0116
+    def test_get_signature_not_exists(self, client, auth):
         p = {
             "id": 0
         }
         r = client.request('GET', '/admin/interact_signature', json=p, headers=auth)
         assert r.status_code == 404 and r.json() == {'detail': 'Signature not found'}
 
-    def test_delete_signature(self, client, auth):  # pylint: disable=C0116
+    def test_delete_signature(self, client, auth):
         signature_id = _create_rand_signature()
         p = {
             "id": signature_id
@@ -397,14 +400,14 @@ class TestSignaturesOperations:
         r = client.request('DELETE', '/admin/interact_signature', json=p, headers=auth)
         assert r.status_code == 200 and r.json() == {'success': True}
 
-    def test_delete_signature_not_exists(self, client, auth):  # pylint: disable=C0116
+    def test_delete_signature_not_exists(self, client, auth):
         p = {
             "id": 0
         }
         r = client.request('DELETE', '/admin/interact_signature', json=p, headers=auth)
         assert r.status_code == 404 and r.json() == {'detail': 'Signature not found'}
 
-    def test_delete_signature_with_installations(self, client, auth):  # pylint: disable=C0116
+    def test_delete_signature_with_installations(self, client, auth):
         signature_id = _create_rand_signature()
         with create_db_session() as session:
             inst = models.Installation(fingerprint=rand_str(16), signature_id=signature_id)

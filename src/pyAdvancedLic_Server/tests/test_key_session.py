@@ -12,6 +12,8 @@ from ..app.db import models
 from . import rand_str, create_db_session
 
 
+# pylint: disable=C0116
+
 @pytest.mark.usefixtures('client', 'rebuild_db')
 class TestKeySession:  # pylint: disable=C0115
     @staticmethod
@@ -50,7 +52,7 @@ class TestKeySession:  # pylint: disable=C0115
         assert r.status_code == 200
         return r.json()['session_id']
 
-    def test_wrong_key(self, client):  # pylint: disable=C0116
+    def test_wrong_key(self, client):
         p = {
             "license_key": rand_str(16),
             "fingerprint": rand_str(16)
@@ -59,7 +61,7 @@ class TestKeySession:  # pylint: disable=C0115
         assert r.status_code == 403
         assert not r.json()['success'] and 'error' in r.json().keys()
 
-    def test_valid_key(self, client):  # pylint: disable=C0116
+    def test_valid_key(self, client):
         key = self.__create_rand_signature()[1]
         p = {
             "license_key": key,
@@ -69,7 +71,8 @@ class TestKeySession:  # pylint: disable=C0115
         assert r.status_code == 200
         assert r.json()['success'] and r.json()['session_id']
 
-    def test_immediately_end_session(self, client):  # pylint: disable=C0116
+    def test_immediately_end_session(self, client):
+        """Create session by verifying key and immediately end it"""
         session_id = self.__create_rand_session(client)
         p = {
             "session_id": session_id
@@ -78,7 +81,8 @@ class TestKeySession:  # pylint: disable=C0115
         assert r.status_code == 200
         assert r.json()['success']
 
-    def test_keepalive_end_session(self, client):  # pylint: disable=C0116
+    def test_keepalive_end_session(self, client):
+        """Create session, send some keepalive packets, then end it"""
         session_id = self.__create_rand_session(client)
         p = {
             "session_id": session_id
@@ -92,7 +96,8 @@ class TestKeySession:  # pylint: disable=C0115
         assert r.status_code == 200
         assert r.json()['success']
 
-    def test_auto_end_session(self, client):  # pylint: disable=C0116
+    def test_auto_end_session(self, client):
+        """Create session and wait until it gets expired"""
         session_id = self.__create_rand_session(client)
         p = {
             "session_id": session_id
@@ -101,7 +106,8 @@ class TestKeySession:  # pylint: disable=C0115
         r = client.request('POST', '/keepalive', json=p)
         assert r.status_code == 404
 
-    def test_keepalive_auto_end_session(self, client):  # pylint: disable=C0116
+    def test_keepalive_auto_end_session(self, client):
+        """Create session, send some keepalive packets and wait until it gets expired"""
         session_id = self.__create_rand_session(client)
         p = {
             "session_id": session_id
@@ -114,7 +120,8 @@ class TestKeySession:  # pylint: disable=C0115
         r = client.request('POST', '/keepalive', json=p)
         assert r.status_code == 404
 
-    def test_limit_installs(self, client):  # pylint: disable=C0116
+    def test_limit_installs(self, client):
+        """Test abusing installations limit"""
         product_id = self.__create_rand_product(inst_lim=1)
         key = self.__create_rand_signature(product_id)[1]
         p = {
@@ -129,7 +136,8 @@ class TestKeySession:  # pylint: disable=C0115
         assert r.status_code == 403
         assert r.json() == {'error': 'Installations limit exceeded', 'success': False}
 
-    def test_limit_sessions(self, client):  # pylint: disable=C0116
+    def test_limit_sessions(self, client):
+        """Test abusing sessions limit"""
         product_id = self.__create_rand_product(sessions_lim=1)
         key = self.__create_rand_signature(product_id)[1]
         p = {
@@ -142,7 +150,8 @@ class TestKeySession:  # pylint: disable=C0115
         assert r.status_code == 403
         assert r.json() == {'error': 'Sessions limit exceeded', 'success': False}
 
-    def test_signature_exp_after_activation(self, client):  # pylint: disable=C0116
+    def test_signature_exp_after_activation(self, client):
+        """Test the case when signature expires when session ended"""
         sig_period = 5
         product_id = self.__create_rand_product(sig_period=timedelta(seconds=sig_period))
         key = self.__create_rand_signature(product_id)[1]
@@ -159,7 +168,8 @@ class TestKeySession:  # pylint: disable=C0115
         assert r.status_code == 403
         assert r.json() == {'error': 'License expired', 'success': False}
 
-    def test_signature_exp_while_session(self, client):  # pylint: disable=C0116
+    def test_signature_exp_while_session(self, client):
+        """Test the case when signature expires while session is active"""
         sig_period = 1
         product_id = self.__create_rand_product(sig_period=timedelta(seconds=sig_period))
         key = self.__create_rand_signature(product_id)[1]

@@ -29,6 +29,7 @@ async def global_init(user, password, hostname, db_name):
     ENGINE = create_async_engine(conn_str, echo=False)
     __FACTORY = sessionmaker(bind=ENGINE, class_=AsyncSession, expire_on_commit=False)
     async with ENGINE.begin() as conn:
+        # Create all models
         await conn.run_sync(SqlAlchemyBase.metadata.create_all)
 
 

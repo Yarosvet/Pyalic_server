@@ -17,7 +17,7 @@ async def lifespan(application: FastAPI):  # pylint: disable=unused-argument
     """Lifespan of FastAPI application"""
     await db.global_init(config.DB_USER, config.DB_PASSWORD, config.DB_HOST, config.DB_NAME)
     await create_default_user_if_not_exists()
-    await periodic_clean_expired_sessions()  # Call in once, then it will be calling by itself
+    await periodic_clean_expired_sessions()  # Call in once, then it will be called by itself
     yield
 
 

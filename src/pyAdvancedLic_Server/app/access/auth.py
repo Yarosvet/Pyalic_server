@@ -14,9 +14,16 @@ from ..config import SECRET_KEY
 from ..schema import TokenData, User
 
 ALGORITHM = "HS256"
+TOKEN_LIFETIME = 15  # Minutes
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="admin/token")
+
+CredentialsException = HTTPException(
+    status_code=status.HTTP_401_UNAUTHORIZED,
+    detail="Wrong credentials",
+    headers={"WWW-Authenticate": "Bearer"},
+)
 
 
 def get_password_hash(password):  # pylint: disable=C0116
@@ -44,8 +51,8 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
-    to_encode.update({"exp": expire})
+        expire = datetime.utcnow() + timedelta(minutes=TOKEN_LIFETIME)
+    to_encode.update({"exp": expire})  # Set expiration time
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
@@ -55,35 +62,33 @@ async def authenticate_user(username: str, password: str, session: AsyncSession)
     Authenticate user
     :return: `False` if authentication failed, or `User` scheme if authentication passed
     """
+    # Get user from DB
     r = await session.execute(select(models.User).filter_by(username=username))
     user = r.scalar_one_or_none()
-    if not user:
+    if not user:  # User doesn't exist
         return False
-    if not check_password(password, user.hashed_password):
+    if not check_password(password, user.hashed_password):  # Wrong password
         return False
     return User(username=user.username, id=user.id)
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme), session: AsyncSession = Depends(create_session)):
+async def get_current_user(token: str = Depends(oauth2_scheme),
+                           session: AsyncSession = Depends(create_session)) -> User:
     """
     Dependency checking if the user is authenticated and getting his scheme
-    :return:
+    :return: `User` scheme
     """
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Wrong credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])  # Decode payload
         username: str = payload.get("sub")
         if username is None:
-            raise credentials_exception
+            raise CredentialsException
         token_data = TokenData(username=username)
-    except JWTError as exc:
-        raise credentials_exception from exc
+    except JWTError as exc:  # Error while decoding
+        raise CredentialsException from exc
+    # Get user from DB
     r = await session.execute(select(models.User).filter_by(username=token_data.username))
     user = r.scalar_one_or_none()
-    if user is None:
-        raise credentials_exception
+    if user is None:  # If there's no such user, throw exception
+        raise CredentialsException
     return User(username=user.username, id=user.id)

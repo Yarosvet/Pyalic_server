@@ -18,13 +18,19 @@ if logger is None:
     if LOGGING_ENABLED:
         formatter = Formatter(
             "[%(filename)s:%(lineno)d (%(funcName)s)] %(asctime)s %(levelname)s \t %(message)s")
-        file_handler = AsyncTimedRotatingFileHandler(LOG_FILE, when=RolloverInterval.DAYS, interval=1, utc=True,
+        # Log to file
+        file_handler = AsyncTimedRotatingFileHandler(LOG_FILE,
+                                                     when=RolloverInterval.DAYS,
+                                                     interval=1,
+                                                     utc=True,
                                                      backup_count=3)
         file_handler.formatter = formatter
         logger.add_handler(file_handler)
+        # Log to STDERR
         stream_handler = AsyncStreamHandler(sys.stderr, level=LogLevel.INFO, formatter=formatter)
         logger.add_handler(stream_handler)
     else:
+        # Log to /dev/null
         devnull = open(os.devnull, 'w', encoding='utf-8')  # pylint: disable=consider-using-with
         stream_handler = AsyncStreamHandler(devnull)
         logger.add_handler(stream_handler)
