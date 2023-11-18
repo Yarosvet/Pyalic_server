@@ -1,32 +1,27 @@
-from pydantic import BaseModel, root_validator
+"""
+Pydantic schemas
+"""
 from typing import Any
-
-
-# class UnspecifiedModel(BaseModel):
-#     unspecified_fields: list = []
-#
-#     @root_validator(pre=True)
-#     def mark_as_unspecified(cls, values: dict):  # noqa
-#         assert 'unspecified_fields' not in values.keys()
-#         unspecified = []
-#         for field in cls.__fields__:
-#             if field not in values.keys():
-#                 unspecified.append(field)
-#         values['unspecified_fields'] = unspecified
-#         return values
+from pydantic import BaseModel  # pylint: disable=no-name-in-module
 
 
 class UnspecifiedModel(BaseModel):
+    """
+    Model with nullable fields;
+    If field really was not specified its name will be in `UnspecifiedModel.unspecified_fields`
+    """
     __slots__ = ('unspecified_fields',)
 
     def __init__(self, **data: Any):
         super().__init__(**data)
         unspecified = set()
         for field in self.__fields__:
-            if field not in data.keys():
+            if field not in data:
                 unspecified.add(field)
         object.__setattr__(self, 'unspecified_fields', unspecified)
 
+
+# pylint: disable=missing-class-docstring
 
 class ShortProduct(BaseModel):
     name: str

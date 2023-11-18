@@ -1,7 +1,10 @@
+"""
+Wrapper to easily use licensing engine
+"""
+from datetime import datetime, timedelta
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import datetime, timedelta
 
 from ..db import models
 from . import status
@@ -9,6 +12,13 @@ from .sessions import search_sessions, create_session
 
 
 async def process_check_request(license_key: str, fingerprint: str, session: AsyncSession) -> tuple[bool, str]:
+    """
+
+    :param license_key: Client's license key
+    :param fingerprint: Client's fingerprint
+    :param session: AsyncSession of database
+    :return: `False` and explanation why access mustn't be granted or 'True` and session ID
+    """
     # Get signature
     r = await session.execute(select(models.Signature).filter_by(license_key=license_key).options(
         selectinload(models.Signature.product), selectinload(models.Signature.installations)))

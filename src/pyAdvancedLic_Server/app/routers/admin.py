@@ -1,10 +1,12 @@
-from fastapi import APIRouter, HTTPException, Depends, status
+"""
+Routers for only admin access
+"""
+from datetime import timedelta, datetime
+from copy import copy
+from fastapi import APIRouter, HTTPException, Depends, status, security
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
-from datetime import timedelta, datetime
-from fastapi.security import OAuth2PasswordRequestForm
-from copy import copy
 
 from .. import schema, config
 from ..db import create_session, models
@@ -35,6 +37,7 @@ async def _get_user(current_user: schema.User, session: AsyncSession) -> models.
 async def get_product(payload: schema.IdField,
                       session: AsyncSession = Depends(create_session),
                       current_user: schema.User = Depends(auth.get_current_user)):
+    """Request handler getting product"""
     r = await session.execute(select(models.Product).filter_by(id=payload.id).options(
         selectinload(models.Product.signatures)))
     p = r.scalar_one_or_none()
@@ -53,6 +56,7 @@ async def get_product(payload: schema.IdField,
 async def add_product(payload: schema.AddProduct,
                       session: AsyncSession = Depends(create_session),
                       current_user: schema.User = Depends(auth.get_current_user)):
+    """Request handler adding product"""
     r = await session.execute(select(models.Product).filter_by(name=payload.name))
     if r.unique().scalars().first() is not None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
@@ -82,6 +86,7 @@ async def add_product(payload: schema.AddProduct,
 async def update_product(payload: schema.UpdateProduct,
                          session: AsyncSession = Depends(create_session),
                          current_user: schema.User = Depends(auth.get_current_user)):
+    """Request handler updating existing product"""
     r = await session.execute(select(models.Product).filter_by(id=payload.id).options(
         selectinload(models.Product.signatures)))
     p = r.scalar_one_or_none()
@@ -117,6 +122,7 @@ async def update_product(payload: schema.UpdateProduct,
 async def delete_product(payload: schema.IdField,
                          session: AsyncSession = Depends(create_session),
                          current_user: schema.User = Depends(auth.get_current_user)):
+    """Request handler deleting existing product"""
     r = await session.execute(select(models.Product).filter_by(id=payload.id).options(
         selectinload(models.Product.signatures).selectinload(models.Signature.installations)))
     p = r.scalar_one_or_none()
@@ -139,6 +145,7 @@ async def delete_product(payload: schema.IdField,
 
 @router.get("/list_products", response_model=schema.ListProducts)
 async def list_products(payload: schema.ProductsLimitOffset, session: AsyncSession = Depends(create_session)):
+    """Request handler for getting list of all products"""
     r = await session.execute(
         select(models.Product).order_by(models.Product.id).offset(payload.offset).limit(payload.limit).options(
             selectinload(models.Product.signatures)))
@@ -155,6 +162,7 @@ async def list_products(payload: schema.ProductsLimitOffset, session: AsyncSessi
 async def list_signatures(payload: schema.SignaturesLimitOffset,
                           session: AsyncSession = Depends(create_session),
                           current_user: schema.User = Depends(auth.get_current_user)):
+    """Request handler for getting list of signatures of specified product"""
     r = await session.execute(select(models.Product).filter_by(id=payload.product_id))
     p = r.scalar_one_or_none()
     if p is None:
@@ -174,6 +182,7 @@ async def list_signatures(payload: schema.SignaturesLimitOffset,
 async def get_signature(payload: schema.IdField,
                         session: AsyncSession = Depends(create_session),
                         current_user: schema.User = Depends(auth.get_current_user)):
+    """Request handler for getting signature info"""
     r = await session.execute(
         select(models.Signature).filter_by(id=payload.id).options(
             selectinload(models.Signature.installations), selectinload(models.Signature.product)))
@@ -193,6 +202,7 @@ async def get_signature(payload: schema.IdField,
 async def add_signature(payload: schema.AddSignature,
                         session: AsyncSession = Depends(create_session),
                         current_user: schema.User = Depends(auth.get_current_user)):
+    """Request handler for adding new signature of specified product"""
     r = await session.execute(select(models.Signature).filter_by(license_key=payload.license_key))
     if r.scalar_one_or_none() is not None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
@@ -220,6 +230,7 @@ async def add_signature(payload: schema.AddSignature,
 async def update_signature(payload: schema.UpdateSignature,
                            session: AsyncSession = Depends(create_session),
                            current_user: schema.User = Depends(auth.get_current_user)):
+    """Request handler for updating an existing signature"""
     r = await session.execute(
         select(models.Signature).filter_by(id=payload.id).options(
             selectinload(models.Signature.installations), selectinload(models.Signature.product)))
@@ -252,6 +263,7 @@ async def update_signature(payload: schema.UpdateSignature,
 async def delete_signature(payload: schema.IdField,
                            session: AsyncSession = Depends(create_session),
                            current_user: schema.User = Depends(auth.get_current_user)):
+    """Request handler for deleting an existing signature"""
     r = await session.execute(select(models.Signature).filter_by(id=payload.id))
     sig = r.scalar_one_or_none()
     if sig is None:
@@ -272,8 +284,9 @@ async def delete_signature(payload: schema.IdField,
 
 
 @public_router.post("/token", response_model=schema.Token)
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(),
+async def login_for_access_token(form_data: security.OAuth2PasswordRequestForm = Depends(),
                                  session: AsyncSession = Depends(create_session)):
+    """Authorization request handler for getting JWT token"""
     user = await auth.authenticate_user(form_data.username, form_data.password, session)
     if not user:
         raise HTTPException(
@@ -290,11 +303,13 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 
 @router.get("/users/me/", response_model=schema.User)
 async def users_me(current_user: schema.User = Depends(auth.get_current_user)):
+    """Responding `whoami` request"""
     return current_user
 
 
 @router.get("/users/list", response_model=schema.ListUsers)
 async def list_users(payload: schema.UsersLimitOffset, session: AsyncSession = Depends(create_session)):
+    """Request handler for getting list of all users"""
     r = await session.execute(select(models.User).order_by(models.User.id).offset(payload.offset).limit(payload.limit))
     users = []
     for u in r.scalars():
@@ -305,6 +320,7 @@ async def list_users(payload: schema.UsersLimitOffset, session: AsyncSession = D
 @router.get("/users/interact_user", response_model=schema.ExpandedUser)
 async def get_user(payload: schema.UserId,
                    session: AsyncSession = Depends(create_session)):
+    """Request handler for getting User by his ID"""
     r = await session.execute(select(models.User).filter_by(id=payload.id))
     u = r.scalar_one_or_none()
     if u is None:
@@ -316,6 +332,7 @@ async def get_user(payload: schema.UserId,
 async def add_user(payload: schema.AddUser,
                    session: AsyncSession = Depends(create_session),
                    current_user: schema.User = Depends(auth.get_current_user)):
+    """Request handler for adding new user with specified parameters"""
     current_user_in_db = await _get_user(current_user, session)
     if not current_user_in_db.get_verifiable_permissions().able_add_user(payload.permissions):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You have no permission")
@@ -336,6 +353,7 @@ async def add_user(payload: schema.AddUser,
 async def update_user(payload: schema.UpdateUser,
                       session: AsyncSession = Depends(create_session),
                       current_user: schema.User = Depends(auth.get_current_user)):
+    """Request handler for updating an existing user"""
     r = await session.execute(select(models.User).filter_by(id=payload.id))
     u = r.scalar_one_or_none()
     if u is None:
@@ -361,6 +379,7 @@ async def update_user(payload: schema.UpdateUser,
 async def delete_user(payload: schema.UserId,
                       session: AsyncSession = Depends(create_session),
                       current_user: schema.User = Depends(auth.get_current_user)):
+    """Request handler for deleting an existing user"""
     r = await session.execute(select(models.User).filter_by(id=payload.id))
     u = r.scalar_one_or_none()
     if u is None:

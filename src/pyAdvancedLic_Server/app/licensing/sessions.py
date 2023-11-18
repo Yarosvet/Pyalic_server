@@ -1,3 +1,6 @@
+"""
+Sessions mechanics
+"""
 import random
 from string import ascii_letters, digits
 from datetime import datetime
@@ -8,7 +11,9 @@ from ..loggers import logger
 
 
 class SessionNotFoundException(Exception):
-    pass
+    """
+    Requested Session ID not found
+    """
 
 
 def _random_session_id(signature_id: int, signature_ends: int):
@@ -17,6 +22,12 @@ def _random_session_id(signature_id: int, signature_ends: int):
 
 
 async def create_session(signature_id: int, signature_ends: int) -> str:
+    """
+    Create licensing session
+    :param signature_id: ID of Signature
+    :param signature_ends: Timestamp when session must be ended because of signature expiration
+    :return: Session ID
+    """
     session_id = _random_session_id(signature_id, signature_ends)
     while await redis.exists(session_id):
         session_id = _random_session_id(signature_id, signature_ends)
@@ -26,12 +37,20 @@ async def create_session(signature_id: int, signature_ends: int) -> str:
 
 
 async def keep_alive(session_id: str):
+    """
+    Keep-alive session
+    :param session_id: Session ID
+    """
     if not await redis.exists(session_id):
         raise SessionNotFoundException
     await redis.set(session_id, datetime.utcnow().isoformat())
 
 
 async def end_session(session_id: str):
+    """
+    Correctly end session
+    :param session_id: Session ID
+    """
     if not await redis.exists(session_id):
         raise SessionNotFoundException
     await redis.delete(session_id)
@@ -39,6 +58,11 @@ async def end_session(session_id: str):
 
 
 async def search_sessions(signature_id: int) -> list[str]:
+    """
+    Get active session IDs of specified signature
+    :param signature_id: Signature ID
+    :return:
+    """
     res = []
     async for session_id in redis.scan_iter(match=f"{signature_id}:*:*"):
         res.append(session_id)
@@ -46,6 +70,9 @@ async def search_sessions(signature_id: int) -> list[str]:
 
 
 async def clean_expired_sessions():
+    """
+    Find and remove sessions which are expired or signature expired
+    """
     async for session_id in redis.scan_iter(match="*:*:*"):
         last_keepalive_str = await redis.get(session_id)
         delta_alive = (datetime.utcnow() - datetime.fromisoformat(last_keepalive_str.decode('utf-8'))).total_seconds()

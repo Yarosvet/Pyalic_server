@@ -1,3 +1,6 @@
+"""
+User's api for checking license and managing session
+"""
 from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,6 +18,7 @@ router = APIRouter()
 
 @router.get("/check_license")
 async def check_license(payload: schema.CheckLicense, session: AsyncSession = Depends(create_session)):
+    """Request handler for checking license and creating a new Session with ID"""
     confirmed, error_or_sid = await lic_engine.process_check_request(payload.license_key, payload.fingerprint, session)
     if confirmed:
         r = await session.execute(select(models.Signature).filter_by(license_key=payload.license_key).options(
@@ -31,17 +35,19 @@ async def check_license(payload: schema.CheckLicense, session: AsyncSession = De
 
 @router.post("/keepalive", response_model=schema.Successful)
 async def keepalive(payload: schema.SessionIdField):
+    """Request handler for processing keep-alive sessions"""
     try:
         await lic_sessions.keep_alive(payload.session_id)
-    except lic_sessions.SessionNotFoundException:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+    except lic_sessions.SessionNotFoundException as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found") from exc
     return schema.Successful()
 
 
 @router.post("/end_session", response_model=schema.Successful)
 async def end_session(payload: schema.SessionIdField):
+    """Request handler for correctly ending session by Session ID"""
     try:
         await lic_sessions.end_session(payload.session_id)
-    except lic_sessions.SessionNotFoundException:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+    except lic_sessions.SessionNotFoundException as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found") from exc
     return schema.Successful()

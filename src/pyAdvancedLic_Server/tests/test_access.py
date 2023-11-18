@@ -1,10 +1,12 @@
+"""
+Test all about access management and authorization
+"""
 import pytest
-from fastapi.testclient import TestClient
 
-from src.pyAdvancedLic_Server.app import config
-from src.pyAdvancedLic_Server.app.db import models
-from src.pyAdvancedLic_Server.app.access.auth import check_password
-from src.pyAdvancedLic_Server.app.access.auth import get_password_hash
+from ..app import config
+from ..app.db import models
+from ..app.access.auth import check_password
+from ..app.access.auth import get_password_hash
 
 from . import rand_str, create_db_session
 
@@ -27,13 +29,17 @@ def _create_rand_product_with_user() -> int:
 
 @pytest.mark.usefixtures('client', 'rebuild_db')
 class TestAuth:
-    def test_wrong_access_token(self, client):
+    """
+    Test authentication system
+    """
+
+    def test_wrong_access_token(self, client):  # pylint: disable=C0116
         h = {'Authorization': f'Bearer {rand_str(16)}'}
         r = client.request('GET', '/admin/users/me', headers=h)
         assert r.status_code == 401
         assert 'id' not in r.json().keys() and 'username' not in r.json().keys()
 
-    def test_valid_creds(self, client):
+    def test_valid_creds(self, client):  # pylint: disable=C0116
         p = {
             "grant_type": "password",
             "username": config.DEFAULT_USER,
@@ -44,7 +50,7 @@ class TestAuth:
         assert 'access_token' in r.json().keys() and r.json()['access_token']
         assert 'token_type' in r.json().keys() and r.json()['token_type'] == "bearer"
 
-    def test_wrong_password(self, client):
+    def test_wrong_password(self, client):  # pylint: disable=C0116
         p = {
             "grant_type": "password",
             "username": config.DEFAULT_USER,
@@ -55,7 +61,7 @@ class TestAuth:
         assert 'access_token' not in r.json().keys()
         assert 'token_type' not in r.json().keys()
 
-    def test_wrong_user(self, client):
+    def test_wrong_user(self, client):  # pylint: disable=C0116
         p = {
             "grant_type": "password",
             "username": rand_str(16),
@@ -69,7 +75,11 @@ class TestAuth:
 
 @pytest.mark.usefixtures('client', 'rebuild_db', 'auth')
 class TestUsersOperations:
-    def test_list_users(self, client, auth):
+    """
+    Test operations with users
+    """
+
+    def test_list_users(self, client, auth):  # pylint: disable=C0116
         p = {
             'limit': 100,
             'offset': 0
@@ -78,12 +88,12 @@ class TestUsersOperations:
         assert r.status_code == 200
         assert r.json()['items'] == len(r.json()['users'])
 
-    def test_getting_me(self, client, auth):
+    def test_getting_me(self, client, auth):  # pylint: disable=C0116
         r = client.request('GET', '/admin/users/me', headers=auth)
         j = r.json()
         assert 'id' in j.keys() and 'username' in j.keys() and j['username'] == config.DEFAULT_USER
 
-    def test_add_user(self, client, auth):
+    def test_add_user(self, client, auth):  # pylint: disable=C0116
         username = rand_str(16)
         password = rand_str(16)
         permissions = "superuser"
@@ -104,7 +114,7 @@ class TestUsersOperations:
             assert u.username == j['username'] == username
             assert check_password(password, u.hashed_password)
 
-    def test_get_user(self, client, auth):
+    def test_get_user(self, client, auth):  # pylint: disable=C0116
         permissions = "superuser"
         username = rand_str(16)
         password = rand_str(16)
@@ -126,12 +136,12 @@ class TestUsersOperations:
         assert j['permissions'] == permissions
         assert j['master_id'] == u.master_id
 
-    def test_get_user_not_exists(self, client, auth):
+    def test_get_user_not_exists(self, client, auth):  # pylint: disable=C0116
         p = {'id': 0}
         r = client.request('GET', '/admin/users/interact_user', json=p, headers=auth)
         assert r.status_code == 404 and r.json()['detail'] == 'User not found'
 
-    def test_update_user(self, client, auth):
+    def test_update_user(self, client, auth):  # pylint: disable=C0116
         permissions = "superuser"
         username = rand_str(16)
         password = rand_str(16)
@@ -162,7 +172,7 @@ class TestUsersOperations:
             assert j['master_id'] == u.master_id
             assert check_password(new_password, u.hashed_password)
 
-    def test_update_user_not_exists(self, client, auth):
+    def test_update_user_not_exists(self, client, auth):  # pylint: disable=C0116
         p = {
             'id': 0,
             'username': rand_str(16)
@@ -170,7 +180,7 @@ class TestUsersOperations:
         r = client.request('PUT', '/admin/users/interact_user', json=p, headers=auth)
         assert r.status_code == 404 and r.json()['detail'] == 'User not found'
 
-    def test_delete_user(self, client, auth):
+    def test_delete_user(self, client, auth):  # pylint: disable=C0116
         permissions = "superuser"
         username = rand_str(16)
         password = rand_str(16)
@@ -188,7 +198,7 @@ class TestUsersOperations:
             assert r.status_code == 200
             assert r.json()['success']
 
-    def test_delete_user_not_exists(self, client, auth):
+    def test_delete_user_not_exists(self, client, auth):  # pylint: disable=C0116
         p = {'id': 0}
         r = client.request('DELETE', '/admin/users/interact_user', json=p, headers=auth)
         assert r.status_code == 404 and r.json()['detail'] == 'User not found'
@@ -196,6 +206,9 @@ class TestUsersOperations:
 
 @pytest.mark.usefixtures('client', 'rebuild_db', 'auth')
 class TestUserPermissions:
+    """
+    Test permissions; What user can or cannot do
+    """
 
     @staticmethod
     def __set_default_user_permissions(permissions: str):
@@ -204,28 +217,10 @@ class TestUserPermissions:
             u.permissions = permissions
             session.commit()
 
-    @staticmethod
-    def __new_user_auth(permissions: str, client: TestClient, attach_master=True) -> dict[str, str]:
-        with create_db_session() as session:
-            master_id = session.query(models.User).filter_by(username=config.DEFAULT_USER).one_or_none().id
-            username = rand_str(16)
-            password = rand_str(16)
-            u = models.User(master_id=master_id if attach_master else None,
-                            permissions=permissions,
-                            username=username,
-                            hashed_password=get_password_hash(password))
-            session.add(u)
-            session.commit()
-            p = {
-                "grant_type": "password",
-                "username": username,
-                "password": password
-            }
-            r = client.request('POST', '/admin/token', data=p)
-            token = r.json()['access_token']
-            return {'Authorization': f"Bearer {token}"}
-
     def test_permissions_inheritance(self, client, auth):
+        """
+        Test that user can create another one with permissions less than the same
+        """
         self.__set_default_user_permissions("manage_own_products,manage_other_products,create_users")
         p = {
             "username": rand_str(16),
@@ -236,6 +231,9 @@ class TestUserPermissions:
         assert r.status_code == 200
 
     def test_permissions_inheritance_abuse(self, client, auth):
+        """
+        Test that user cannot create another one with permissions higher than he has
+        """
         self.__set_default_user_permissions("manage_own_products,manage_other_products,create_users")
         p = {
             "username": rand_str(16),
@@ -245,7 +243,7 @@ class TestUserPermissions:
         r = client.request('POST', '/admin/users/interact_user', json=p, headers=auth)
         assert r.status_code == 403
 
-    def test_manage_own_products(self, client, auth):
+    def test_manage_own_products(self, client, auth):  # pylint: disable=C0116
         self.__set_default_user_permissions("manage_own_products")
         p = {
             "name": "TestProductB",
@@ -262,7 +260,7 @@ class TestUserPermissions:
         r = client.request('GET', '/admin/list_signatures', json=p, headers=auth)
         assert r.status_code == 200
 
-    def test_manage_own_products_abuse(self, client, auth):
+    def test_manage_own_products_abuse(self, client, auth):  # pylint: disable=C0116
         self.__set_default_user_permissions("")
         p = {
             "name": "TestProductB",
@@ -286,7 +284,7 @@ class TestUserPermissions:
         r = client.request('GET', '/admin/list_signatures', json=p, headers=auth)
         assert r.status_code == 403
 
-    def test_manage_other_products_abuse(self, client, auth):
+    def test_manage_other_products_abuse(self, client, auth):  # pylint: disable=C0116
         product_id = _create_rand_product_with_user()
         # Set empty permissions
         self.__set_default_user_permissions("")
@@ -313,7 +311,7 @@ class TestUserPermissions:
         r = client.request('GET', '/admin/list_signatures', json=p, headers=auth)
         assert r.status_code == 403  # Must fail
 
-    def test_manage_other_products(self, client, auth):
+    def test_manage_other_products(self, client, auth):  # pylint: disable=C0116
         product_id = _create_rand_product_with_user()
         # Set permission
         self.__set_default_user_permissions("manage_other_products")
@@ -340,7 +338,7 @@ class TestUserPermissions:
         r = client.request('GET', '/admin/list_signatures', json=p, headers=auth)
         assert r.status_code == 200  # Must work
 
-    def test_read_other_products_abuse(self, client, auth):
+    def test_read_other_products_abuse(self, client, auth):  # pylint: disable=C0116
         product_id = _create_rand_product_with_user()
         # Set empty permissions
         self.__set_default_user_permissions("")
@@ -359,7 +357,7 @@ class TestUserPermissions:
         r = client.request('GET', '/admin/list_signatures', json=p, headers=auth)
         assert r.status_code == 403  # Must fail
 
-    def test_read_other_products(self, client, auth):
+    def test_read_other_products(self, client, auth):  # pylint: disable=C0116
         product_id = _create_rand_product_with_user()
         # Set permission
         self.__set_default_user_permissions("manage_other_products")
@@ -378,7 +376,7 @@ class TestUserPermissions:
         r = client.request('GET', '/admin/list_signatures', json=p, headers=auth)
         assert r.status_code == 200  # Must work
 
-    def test_create_users(self, client, auth):
+    def test_create_users(self, client, auth):  # pylint: disable=C0116
         self.__set_default_user_permissions("create_users")
         p = {
             "username": rand_str(16),
@@ -389,7 +387,7 @@ class TestUserPermissions:
         r = client.request('POST', '/admin/users/interact_user', json=p, headers=auth)
         assert r.status_code == 200  # Must work
 
-    def test_create_users_abuse(self, client, auth):
+    def test_create_users_abuse(self, client, auth):  # pylint: disable=C0116
         self.__set_default_user_permissions("")
         p = {
             "username": rand_str(16),
@@ -400,7 +398,7 @@ class TestUserPermissions:
         r = client.request('POST', '/admin/users/interact_user', json=p, headers=auth)
         assert r.status_code == 403  # Must fail
 
-    def test_manage_other_users(self, client, auth):
+    def test_manage_other_users(self, client, auth):  # pylint: disable=C0116
         self.__set_default_user_permissions("manage_other_users")
         # Create not owned user
         with create_db_session() as session:
@@ -418,7 +416,7 @@ class TestUserPermissions:
         r = client.request('PUT', '/admin/users/interact_user', json=p, headers=auth)
         assert r.status_code == 200  # Must work
 
-    def test_manage_other_users_abuse(self, client, auth):
+    def test_manage_other_users_abuse(self, client, auth):  # pylint: disable=C0116
         self.__set_default_user_permissions("")
         # Create not owned user
         with create_db_session() as session:
@@ -436,7 +434,7 @@ class TestUserPermissions:
         r = client.request('PUT', '/admin/users/interact_user', json=p, headers=auth)
         assert r.status_code == 403  # Must fail
 
-    def test_manage_own_users(self, client, auth):
+    def test_manage_own_users(self, client, auth):  # pylint: disable=C0116
         self.__set_default_user_permissions("manage_own_users")
         # Create owned user
         with create_db_session() as session:
@@ -456,7 +454,7 @@ class TestUserPermissions:
         r = client.request('PUT', '/admin/users/interact_user', json=p, headers=auth)
         assert r.status_code == 200  # Must work
 
-    def test_manage_own_users_abuse(self, client, auth):
+    def test_manage_own_users_abuse(self, client, auth):  # pylint: disable=C0116
         self.__set_default_user_permissions("")
         # Create owned user
         with create_db_session() as session:

@@ -1,3 +1,6 @@
+"""
+Manage Oauth2
+"""
 from datetime import timedelta, datetime
 from jose import jwt, JWTError
 from passlib.context import CryptContext
@@ -16,15 +19,27 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="admin/token")
 
 
-def get_password_hash(password):
+def get_password_hash(password):  # pylint: disable=C0116
     return pwd_context.hash(password)
 
 
 def check_password(password: str, hashed: str) -> bool:
+    """
+    Verify if the password matches to the hash
+    :param password:
+    :param hashed:
+    :return:
+    """
     return pwd_context.verify(password, hashed)
 
 
-def create_access_token(data: dict, expires_delta: timedelta | None = None):
+def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
+    """
+    Create JWT token
+    :param data: Data to be placed into JWT token
+    :param expires_delta: period while the token is alive
+    :return: KWT string
+    """
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
@@ -35,7 +50,11 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     return encoded_jwt
 
 
-async def authenticate_user(username: str, password: str, session: AsyncSession):
+async def authenticate_user(username: str, password: str, session: AsyncSession) -> bool | User:
+    """
+    Authenticate user
+    :return: `False` if authentication failed, or `User` scheme if authentication passed
+    """
     r = await session.execute(select(models.User).filter_by(username=username))
     user = r.scalar_one_or_none()
     if not user:
@@ -46,6 +65,10 @@ async def authenticate_user(username: str, password: str, session: AsyncSession)
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme), session: AsyncSession = Depends(create_session)):
+    """
+    Dependency checking if the user is authenticated and getting his scheme
+    :return:
+    """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Wrong credentials",
@@ -57,8 +80,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme), session: AsyncSe
         if username is None:
             raise credentials_exception
         token_data = TokenData(username=username)
-    except JWTError:
-        raise credentials_exception
+    except JWTError as exc:
+        raise credentials_exception from exc
     r = await session.execute(select(models.User).filter_by(username=token_data.username))
     user = r.scalar_one_or_none()
     if user is None:

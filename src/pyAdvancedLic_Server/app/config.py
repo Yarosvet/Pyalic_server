@@ -1,5 +1,6 @@
-from dotenv import load_dotenv
+"""Configuration variables from environment"""
 from os import path, environ
+from dotenv import load_dotenv
 
 LOG_FILE = "lic_server.log"
 if path.exists(path.join(path.dirname(__file__), '../../../.env')):
