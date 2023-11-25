@@ -2,8 +2,10 @@ version: "3.8"
 
 services:
   lic_server:
-    build: src/pyAdvancedLic_Server
-    command: gunicorn -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000 app:app
+    build:
+      context: src/pyAdvancedLic_Server
+      dockerfile: Dockerfile
+      target: prod
     env_file: .env
     environment:
       DB_HOST: postgresql:5432

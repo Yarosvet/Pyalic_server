@@ -3,12 +3,12 @@ version: "3.8"
 services:
   test_lic_server:
     build:
-      context: ./
-      dockerfile: ./src/tests/Dockerfile
-    command: python3 run_tests.py
-
+      context: src/pyAdvancedLic_Server/
+      dockerfile: Dockerfile
+      target: tests
     env_file: .env
     environment:
+      LOGGING_ENABLED: 0
       DB_HOST: postgresql:5432
       DB_USER: lic_server
       DB_PASSWORD: "${DB_PASSWORD:-db_password}"
@@ -45,8 +45,8 @@ services:
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U lic_server -d advanced_lic" ]
       timeout: 5s
-      interval: 2s
-      retries: 3
+      interval: 1s
+      retries: 6
 
   redis:
     image: "redis:alpine"

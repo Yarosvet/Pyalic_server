@@ -71,7 +71,7 @@ docker compose -d up
 There is a Dockerfile for running tests in Docker. So you can run following:
 
 ```shell
-docker compose -f tests.docker-compose.yml up --build --exit-code-from test_lic_server
+docker compose -f docker-compose.tests.yml up --build --exit-code-from test_lic_server
 ```
 
 Or if you want to run tests without docker, you must install requirements from `src/tests/requirements.txt`.
