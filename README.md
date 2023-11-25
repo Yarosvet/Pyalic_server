@@ -1,4 +1,4 @@
-# Python Advanced Licensing Server
+# Pyalic: Python Advanced Licensing Server
 
 Licensing server which allows you to manage access to your products
 
@@ -7,13 +7,13 @@ Licensing server which allows you to manage access to your products
 Install package using `pip` from this GitHub repository
 
 ```shell
-pip install git+https://github.com/Yarosvet/pyAdvancedLic#subdirectory=src/pyAdvanced_license
+pip install git+https://github.com/Yarosvet/pyAdvancedLic#subdirectory=src/pyalic_module
 ```
 
 # Python example
 
 ```python
-from pyAdvanced_license import LicenseManager
+from pyalic import LicenseManager
 import time
 
 lm = LicenseManager("https://LICENSE_SERVER_URL.ORG", ssl_public_key='./trusted_cert.pem')
