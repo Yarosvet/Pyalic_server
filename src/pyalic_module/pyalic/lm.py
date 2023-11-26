@@ -1,13 +1,11 @@
 """Synchronous LicenseManager's environment module"""
 from threading import Thread
 import time
-import requests
 
 from .fingerprint import get_fingerprint
 from .exceptions import RequestFailed
 from .response import LicenseCheckResponse, OperationResponse
-
-ATTEMPTS = 3
+from .wrappers import SecureApiWrapper
 
 
 class AutoKeepaliveSender:
@@ -85,10 +83,9 @@ class LicenseManager:
         :param root_url: Root URL of pyAdvancedLic Server
         :param ssl_public_key: Path to SSL cert, or **None** to cancel SSL verifying
         """
-        self.url = root_url.rstrip("/\\")
-        self.ssl_pkey = False if ssl_public_key is None else ssl_public_key
         self.session_id = None
         self.auto_keepalive_sender = AutoKeepaliveSender(lm=self)
+        self.api = SecureApiWrapper(url=root_url, ssl_pkey=False if ssl_public_key is None else ssl_public_key)
 
     def check_key(self, key: str) -> LicenseCheckResponse:
         """
@@ -96,19 +93,8 @@ class LicenseManager:
         :param key: License key
         :return: `LicenseCheckResponse`
         """
-        attempted = 0
-        while True:
-            attempted += 1
-            try:
-                with requests.Session() as session:
-                    r = session.get(f"{self.url}/check_license", verify=self.ssl_pkey,
-                                    json={"license_key": key, "fingerprint": get_fingerprint()})
-                    j = r.json()
-                break
-            except (requests.exceptions.RequestException, requests.exceptions.JSONDecodeError) as exc:
-                if attempted < ATTEMPTS:
-                    continue
-                raise RequestFailed from exc
+        r = self.api.check_key(key, get_fingerprint())
+        j = r.json()
         if r.status_code == 200:
             if j['success']:
                 if self.ENABLE_AUTO_KEEPALIVE:
@@ -133,18 +119,8 @@ class LicenseManager:
         (LicenseManager can do it automatically)
         :return: 'OperationResponse`
         """
-        with requests.Session() as session:
-            attempted = 0
-            while True:
-                attempted += 1
-                try:
-                    r = session.post(f"{self.url}/keepalive", json={"session_id": self.session_id},
-                                     verify=self.ssl_pkey)
-                    j = r.json()
-                except (requests.exceptions.RequestException, requests.exceptions.JSONDecodeError) as exc:
-                    if attempted < ATTEMPTS:
-                        continue
-                    raise RequestFailed from exc
+        r = self.api.keepalive(self.session_id)
+        j = r.json()
         if r.status_code == 200 and j['success']:
             return OperationResponse(request_code=r.status_code, success=True, content=j)
         if 'error' in j.keys():
@@ -167,19 +143,8 @@ class LicenseManager:
         :return: Boolean, whether request successful or not
         """
         self.auto_keepalive_sender.stop()
-        with requests.Session() as session:
-            attempted = 0
-            while True:
-                attempted += 1
-                try:
-                    r = session.post(f"{self.url}/end_session", json={"session_id": self.session_id},
-                                     verify=self.ssl_pkey)
-                    j = r.json()
-                    break
-                except (requests.exceptions.RequestException, requests.exceptions.JSONDecodeError) as exc:
-                    if attempted < ATTEMPTS:
-                        continue
-                    raise RequestFailed from exc
+        r = self.api.end_session(self.session_id)
+        j = r.json()
         if r.status_code == 200 and j['success']:
             return OperationResponse(request_code=r.status_code, success=True, content=j)
         if 'error' in j.keys():
