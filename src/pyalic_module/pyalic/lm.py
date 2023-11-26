@@ -18,6 +18,7 @@ class AutoKeepaliveSender:
     alive = False
     _stop_flag = False
     _t = None
+    _event = None
 
     def __init__(self, lm: 'LicenseManager'):
         self.lm = lm
@@ -31,10 +32,10 @@ class AutoKeepaliveSender:
             self.stop()
             while self.alive:
                 time.sleep(0.01)
-        self._t = Thread(target=self._ka_cycle, name="LicenseAutoKeepAlive", daemon=True)
+        self._t = Thread(target=self._keepalive_cycle, name="LicenseAutoKeepAlive", daemon=True)
         self._t.start()
 
-    def _ka_cycle(self):
+    def _keepalive_cycle(self):
         self.alive = True
         try:
             last_sent = time.time()
@@ -46,21 +47,28 @@ class AutoKeepaliveSender:
                 time.sleep(self.INTERVAL - time_past if self.INTERVAL > time_past else 0)
                 resp = self.lm.keep_alive()
             if not resp.success:
-                self.event_bad_keepalive(operation_response=resp)
+                self._call_event_bad_keepalive(operation_response=resp)
         except RequestFailed as exc:
-            self.event_bad_keepalive(exc=exc)
+            self._call_event_bad_keepalive(exc=exc)
         finally:
             self.alive = False
 
-    def event_bad_keepalive(self, operation_response: OperationResponse = None, exc: Exception = None) -> None:
+    def set_event_bad_keepalive(self, func: object) -> None:
         """
-        Event will be called when keep-alive request goes wrong.
-        Feel free to override this method, for example to end session on this event
+        Set function-event will be called when keep-alive request goes wrong.
+
+        Function must expect two arguments:
+
+        ``operation_response: OperationResponse = None, exc: Exception = None``
 
         It gets one of two arguments:
         operation_response, if request returned wrong answer
         exc, if something caused exception while trying to send request
         """
+
+    def _call_event_bad_keepalive(self, operation_response: OperationResponse = None, exc: Exception = None) -> None:
+        if self._event is not None:
+            self._event(operation_response=operation_response, exc=exc)
 
     def stop(self):
         """Stop sending keepalive packets"""
