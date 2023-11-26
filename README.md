@@ -48,7 +48,7 @@ You can create self-signed one by executing next command with _YOUR_IP_ replaced
 
 ```shell
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/lic_server/key.key -out /etc/ssl/lic_server/cert.crt
-openssl req -x509 -newkey rsa:2048 -sha256 -days 3650 -nodes -keyout example.com.key -out example.com.crt -subj "/CN=YOUR_IP" \
+openssl req -x509 -newkey rsa:2048 -sha256 -days 3650 -nodes -keyout key.key -out cert.crt -subj "/CN=YOUR_IP" \
   -addext "subjectAltName=IP:YOUR_IP"
 ```
 
