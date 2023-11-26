@@ -1,6 +1,7 @@
 """Synchronous LicenseManager's environment module"""
 from threading import Thread
 import time
+import typing
 
 from .fingerprint import get_fingerprint
 from .exceptions import RequestFailed
@@ -51,7 +52,7 @@ class AutoKeepaliveSender:
         finally:
             self.alive = False
 
-    def set_event_bad_keepalive(self, func: object) -> None:
+    def set_event_bad_keepalive(self, func: typing.Callable) -> None:
         """
         Set function-event will be called when keep-alive request goes wrong.
 
@@ -63,6 +64,7 @@ class AutoKeepaliveSender:
         operation_response, if request returned wrong answer
         exc, if something caused exception while trying to send request
         """
+        self._event = func
 
     def _call_event_bad_keepalive(self, operation_response: OperationResponse = None, exc: Exception = None) -> None:
         if self._event is not None:
