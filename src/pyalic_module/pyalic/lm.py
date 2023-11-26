@@ -9,6 +9,10 @@ from .response import LicenseCheckResponse, OperationResponse
 from .wrappers import SecureApiWrapper
 
 
+class CallableBadKeepaliveEvent(typing.Protocol):  # pylint: disable=missing-class-docstring
+    def __call__(self, operation_response: OperationResponse = None, exc: Exception = None) -> typing.Any: ...
+
+
 class AutoKeepaliveSender:
     """Automatic keep-alive packets sender"""
 
@@ -52,7 +56,7 @@ class AutoKeepaliveSender:
         finally:
             self.alive = False
 
-    def set_event_bad_keepalive(self, func: typing.Callable) -> None:
+    def set_event_bad_keepalive(self, func: CallableBadKeepaliveEvent) -> None:
         """
         Set function-event will be called when keep-alive request goes wrong.
 
