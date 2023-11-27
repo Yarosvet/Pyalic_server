@@ -5,18 +5,19 @@ import typing
 
 from .fingerprint import get_fingerprint
 from .exceptions import RequestFailed
-from .response import LicenseCheckResponse, OperationResponse
+from . import response
 from .wrappers import SecureApiWrapper
 
 
 class CallableBadKeepaliveEvent(typing.Protocol):  # pylint: disable=missing-class-docstring
-    def __call__(self, operation_response: OperationResponse = None, exc: Exception = None) -> typing.Any: ...
+    def __call__(self, operation_response: response.OperationResponse = None,
+                 exc: Exception = None) -> typing.Any: ...
 
 
 class AutoKeepaliveSender:
     """Automatic keep-alive packets sender"""
 
-    INTERVAL = 2
+    INTERVAL = 2  # pylint: disable=duplicate-code
 
     alive = False
     _stop_flag = False
@@ -43,9 +44,7 @@ class AutoKeepaliveSender:
         try:
             last_sent = time.time()
             resp = self.lm.keep_alive()
-            while resp.success:
-                if self._stop_flag:
-                    break
+            while resp.success and not self._stop_flag:
                 time_past = time.time() - last_sent
                 time.sleep(self.INTERVAL - time_past if self.INTERVAL > time_past else 0)
                 resp = self.lm.keep_alive()
@@ -62,7 +61,7 @@ class AutoKeepaliveSender:
 
         Function must expect two arguments:
 
-        ``operation_response: OperationResponse = None, exc: Exception = None``
+        ``operation_response: response.OperationResponse = None, exc: Exception = None``
 
         It gets one of two arguments:
         operation_response, if request returned wrong answer
@@ -70,7 +69,8 @@ class AutoKeepaliveSender:
         """
         self._event = func
 
-    def _call_event_bad_keepalive(self, operation_response: OperationResponse = None, exc: Exception = None) -> None:
+    def _call_event_bad_keepalive(self, operation_response: response.OperationResponse = None,
+                                  exc: Exception = None) -> None:
         if self._event is not None:
             self._event(operation_response=operation_response, exc=exc)
 
@@ -93,68 +93,33 @@ class LicenseManager:
         self.auto_keepalive_sender = AutoKeepaliveSender(lm=self)
         self.api = SecureApiWrapper(url=root_url, ssl_pkey=False if ssl_public_key is None else ssl_public_key)
 
-    def check_key(self, key: str) -> LicenseCheckResponse:
+    def check_key(self, key: str) -> response.LicenseCheckResponse:
         """
-        Check license key with specified pyAdvancedLic Server
+        Check license key with specified Pyalic Server
         :param key: License key
-        :return: `LicenseCheckResponse`
+        :return: `response.LicenseCheckResponse`
         """
         r = self.api.check_key(key, get_fingerprint())
-        j = r.json()
-        if r.status_code == 200:
-            if j['success']:
-                if self.ENABLE_AUTO_KEEPALIVE:
-                    self.auto_keepalive_sender.start()
-                self.session_id = j['session_id']
-                return LicenseCheckResponse(request_code=r.status_code,
-                                            success=True,
-                                            content=j,
-                                            session_id=j['session_id'],
-                                            additional_content_product=j['additional_content_product'],
-                                            additional_content_signature=j['additional_content_signature'])
-            return LicenseCheckResponse(request_code=r.status_code, success=False, content=j, error=j['error'])
-        if 'error' in j.keys():
-            return LicenseCheckResponse(request_code=r.status_code, success=False, content=j, error=j['error'])
-        if 'detail' in j.keys():
-            return LicenseCheckResponse(request_code=r.status_code, success=False, content=j, error=j['detail'])
-        return LicenseCheckResponse(request_code=r.status_code, success=False, content=j)
+        processed_resp = response.process_check_key(r.status_code, r.json())
+        if processed_resp.success and self.ENABLE_AUTO_KEEPALIVE:
+            self.auto_keepalive_sender.start()
+        self.session_id = processed_resp.session_id
+        return processed_resp
 
-    def keep_alive(self) -> OperationResponse:
+    def keep_alive(self) -> response.OperationResponse:
         """
         Send keep-alive packet to license server
         (LicenseManager can do it automatically)
-        :return: 'OperationResponse`
+        :return: 'response.OperationResponse`
         """
         r = self.api.keepalive(self.session_id)
-        j = r.json()
-        if r.status_code == 200 and j['success']:
-            return OperationResponse(request_code=r.status_code, success=True, content=j)
-        if 'error' in j.keys():
-            resp = OperationResponse(request_code=r.status_code,
-                                     success=False,
-                                     content=j,
-                                     error=j['error'])
-            return resp
-        if 'detail' in j.keys():
-            resp = OperationResponse(request_code=r.status_code,
-                                     success=False,
-                                     content=j,
-                                     error=j['detail'])
-            return resp
-        return OperationResponse(request_code=r.status_code, success=False, content=j)
+        return response.process_keepalive(r.status_code, r.json())
 
-    def end_session(self) -> OperationResponse:
+    def end_session(self) -> response.OperationResponse:
         """
         End current license session
-        :return: Boolean, whether request successful or not
+        :return: 'response.OperationResponse`
         """
         self.auto_keepalive_sender.stop()
         r = self.api.end_session(self.session_id)
-        j = r.json()
-        if r.status_code == 200 and j['success']:
-            return OperationResponse(request_code=r.status_code, success=True, content=j)
-        if 'error' in j.keys():
-            return LicenseCheckResponse(request_code=r.status_code, success=False, content=j, error=j['error'])
-        if 'detail' in j.keys():
-            return LicenseCheckResponse(request_code=r.status_code, success=False, content=j, error=j['detail'])
-        return OperationResponse(request_code=r.status_code, success=False, content=j)
+        return response.process_end_session(r.status_code, r.json())

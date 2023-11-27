@@ -10,9 +10,12 @@ class AsyncApiWrapper:
     """Pyalic API asynchronous wrapper"""
     TIMEOUT = 20
 
-    def __init__(self, url: str, ssl_ca: str):
+    def __init__(self, url: str, ssl_ca: str | bool):
         self.url = url
-        self.ssl_context = ssl.create_default_context(cafile=ssl_ca)
+        if ssl_ca:
+            self.ssl_context = ssl.create_default_context(cafile=ssl_ca)
+        else:
+            self.ssl_context = False
 
     async def check_key(self, key: str, fingerprint: str) -> aiohttp.ClientResponse:
         """Send **check key** request"""
