@@ -3,7 +3,7 @@ import platform as pl
 import uuid
 
 
-def get_fingerprint() -> str:
+def get_fingerprint() -> str:  # Todo: lru_cache
     """
     :return: Fingerprint of this OS and machine
     """
