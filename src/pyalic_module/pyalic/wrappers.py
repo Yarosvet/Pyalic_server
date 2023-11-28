@@ -4,6 +4,8 @@ import requests
 from .exceptions import RequestFailed
 
 
+# pylint: disable=duplicate-code
+
 class ApiWrapper:
     """Pyalic API wrapper"""
 
@@ -52,7 +54,7 @@ class SecureApiWrapper(ApiWrapper):
             except (requests.exceptions.RequestException, requests.exceptions.JSONDecodeError) as exc:
                 if attempted < self.ATTEMPTS:
                     continue
-                raise RequestFailed from exc
+                raise RequestFailed from exc  # If attempts limit reached, raise exception
 
     def keepalive(self, session_id: str) -> requests.Response:
         """Securely send **keepalive** request"""
@@ -66,7 +68,7 @@ class SecureApiWrapper(ApiWrapper):
             except (requests.exceptions.RequestException, requests.exceptions.JSONDecodeError) as exc:
                 if attempted < self.ATTEMPTS:
                     continue
-                raise RequestFailed from exc
+                raise RequestFailed from exc  # If attempts limit reached, raise exception
 
     def end_session(self, session_id: str) -> requests.Response:
         """Securely send **end session** request"""
@@ -80,4 +82,4 @@ class SecureApiWrapper(ApiWrapper):
             except (requests.exceptions.RequestException, requests.exceptions.JSONDecodeError) as exc:
                 if attempted < self.ATTEMPTS:
                     continue
-                raise RequestFailed from exc
+                raise RequestFailed from exc  # If attempts limit reached, raise exception

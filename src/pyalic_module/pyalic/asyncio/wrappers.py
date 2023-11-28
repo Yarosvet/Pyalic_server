@@ -6,6 +6,8 @@ import aiohttp
 from ..exceptions import RequestFailed
 
 
+# pylint: disable=duplicate-code
+
 class AsyncApiWrapper:
     """Pyalic API asynchronous wrapper"""
     TIMEOUT = 20
@@ -55,7 +57,7 @@ class AsyncSecureApiWrapper(AsyncApiWrapper):
             except (aiohttp.ClientError, json.JSONDecodeError) as exc:
                 if attempted < self.ATTEMPTS:
                     continue
-                raise RequestFailed from exc
+                raise RequestFailed from exc  # If attempts limit reached, raise exception
 
     async def keepalive(self, session_id: str) -> aiohttp.ClientResponse:
         """Securely send **keepalive** request"""
@@ -69,7 +71,7 @@ class AsyncSecureApiWrapper(AsyncApiWrapper):
             except (aiohttp.ClientError, json.JSONDecodeError) as exc:
                 if attempted < self.ATTEMPTS:
                     continue
-                raise RequestFailed from exc
+                raise RequestFailed from exc  # If attempts limit reached, raise exception
 
     async def end_session(self, session_id: str) -> aiohttp.ClientResponse:
         """Securely send **end session** request"""
@@ -83,4 +85,4 @@ class AsyncSecureApiWrapper(AsyncApiWrapper):
             except (aiohttp.ClientError, json.JSONDecodeError) as exc:
                 if attempted < self.ATTEMPTS:
                     continue
-                raise RequestFailed from exc
+                raise RequestFailed from exc  # If attempts limit reached, raise exception

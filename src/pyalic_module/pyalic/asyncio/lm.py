@@ -40,15 +40,20 @@ class AsyncAutoKeepaliveSender:
     async def _keepalive_cycle(self):
         self.alive = True
         try:
+            # Keepalive
             last_sent = time.time()
             resp = await self.lm.keep_alive()
             while resp.success and not self._stop_flag:
+                # Keep interval between requests
                 time_past = time.time() - last_sent
                 await asyncio.sleep(self.INTERVAL - time_past if self.INTERVAL > time_past else 0)
+                # Keepalive
+                last_sent = time.time()
                 resp = await self.lm.keep_alive()
             if not resp.success:
                 await self._call_event_bad_keepalive(operation_response=resp)
         except RequestFailed as exc:
+            # Call event if request failed
             await self._call_event_bad_keepalive(exc=exc)
         finally:
             self.alive = False
@@ -79,7 +84,7 @@ class AsyncAutoKeepaliveSender:
 
 
 class AsyncLicenseManager:
-    """Asynchronous l"""
+    """Asynchronous license manager"""
 
     ENABLE_AUTO_KEEPALIVE = True
 
@@ -101,8 +106,10 @@ class AsyncLicenseManager:
         """
         r = await self.api.check_key(key, get_fingerprint())
         processed_resp = response.process_check_key(r.status, await r.json())
+        # Start sending keepalive packets if needed
         if processed_resp.success and self.ENABLE_AUTO_KEEPALIVE:
             self.auto_keepalive_sender.start()
+        # Save session ID
         self.session_id = processed_resp.session_id
         return processed_resp
 
