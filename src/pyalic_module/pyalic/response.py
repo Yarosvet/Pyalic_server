@@ -32,17 +32,13 @@ class LicenseCheckResponse(OperationResponse):
 
 def process_check_key(status_code: int, content: dict) -> LicenseCheckResponse:
     """Process response for checking key"""
-    if status_code == 200:
-        if content['success']:
-            return LicenseCheckResponse(request_code=status_code,
-                                        success=True,
-                                        content=content,
-                                        session_id=content['session_id'],
-                                        additional_content_product=content['additional_content_product'],
-                                        additional_content_signature=content['additional_content_signature'])
+    if status_code == 200 and 'success' in content and content['success']:
         return LicenseCheckResponse(request_code=status_code,
-                                    success=False, content=content,
-                                    error=content['error'])
+                                    success=True,
+                                    content=content,
+                                    session_id=content['session_id'],
+                                    additional_content_product=content['additional_content_product'],
+                                    additional_content_signature=content['additional_content_signature'])
     if 'error' in content.keys():
         return LicenseCheckResponse(request_code=status_code,
                                     success=False, content=content,
@@ -57,7 +53,7 @@ def process_check_key(status_code: int, content: dict) -> LicenseCheckResponse:
 
 def process_keepalive(status_code: int, content: dict) -> OperationResponse:
     """Process response for keepalive"""
-    if status_code == 200 and content['success']:
+    if status_code == 200 and 'success' in content and content['success']:
         return OperationResponse(request_code=status_code, success=True, content=content)
     if 'error' in content.keys():
         return OperationResponse(request_code=status_code,
@@ -74,7 +70,7 @@ def process_keepalive(status_code: int, content: dict) -> OperationResponse:
 
 def process_end_session(status_code: int, content: dict) -> OperationResponse:
     """Process response for ending session"""
-    if status_code == 200 and content['success']:
+    if status_code == 200 and 'success' in content and content['success']:
         return OperationResponse(request_code=status_code, success=True, content=content)
     if 'error' in content.keys():
         return LicenseCheckResponse(request_code=status_code, success=False, content=content, error=content['error'])
