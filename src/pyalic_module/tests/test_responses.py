@@ -71,13 +71,12 @@ def test_keepalive_success():
 
 
 def test_keepalive_fail():
-    content = {"success": False,
-               "error": "Session not found"}
+    content = {"detail": "Session not found"}
     r = response.process_keepalive(404, content)
     assert not r.success
     assert r.request_code == 404
     assert r.content == content
-    assert r.error == content['error']
+    assert r.error == content['detail']
 
 
 def test_keepalive_wrong_request():
