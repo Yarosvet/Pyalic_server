@@ -29,12 +29,15 @@ class HTTPResponse:
 class PreconfiguredHTTPRequestHandler(BaseHTTPRequestHandler):
     """Handle HTTP requests with preconfigured responses"""
     _mapping = {}
+    _events = {}
     fail_first = False
 
     @classmethod
-    def set_response(cls, request: HTTPRequest, response: HTTPResponse):
+    def set_response(cls, request: HTTPRequest, response: HTTPResponse, event: typing.Callable = None):
         """Set response for HTTP request"""
         cls._mapping[request] = response
+        if event is not None:
+            cls._events[request] = event
 
     @classmethod
     def clear_mapping(cls):
@@ -59,11 +62,12 @@ class PreconfiguredHTTPRequestHandler(BaseHTTPRequestHandler):
                 self.send_header('Content-type', 'text/html')
                 self.end_headers()
                 self.wfile.write(json.dumps(resp.response_data).encode('utf-8'))
+                if req in self._events:
+                    self._events[req]()
                 return
         self.send_response(404)
         self.send_header('Content-type', 'text/html')
         self.end_headers()
-        print(self._mapping)
 
     def do_GET(self):  # pylint: disable=invalid-name  # noqa
         """Handle GET request"""
@@ -87,6 +91,7 @@ def preconfigured_handler_factory() -> type[PreconfiguredHTTPRequestHandler]:
 
     class _Handler(PreconfiguredHTTPRequestHandler):
         _mapping = {}
+        _events = {}
         fail_first = False
 
     return _Handler
