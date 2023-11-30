@@ -1,6 +1,13 @@
 """Tests for Pylic module"""
 import random
 import string
+from os import path
+
+_DIR_PATH = path.split(path.abspath(__file__))[:-1]
+
+SERVER_PORT = 8080
+CERT_FILE = path.join(*_DIR_PATH, "ssl/", "cert.crt")
+KEY_FILE = path.join(*_DIR_PATH, "ssl/", "key.key")
 
 
 def rand_str(length: int) -> str:
