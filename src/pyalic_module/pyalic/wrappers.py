@@ -11,7 +11,7 @@ class ApiWrapper:
 
     TIMEOUT = 20
 
-    def __init__(self, url: str, ssl_pkey: str):
+    def __init__(self, url: str, ssl_pkey: str | bool = False):
         self.url = url
         self.ssl_pkey = ssl_pkey
 
