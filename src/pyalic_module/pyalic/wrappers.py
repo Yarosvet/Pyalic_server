@@ -12,28 +12,28 @@ class ApiWrapper:
 
     TIMEOUT = 20
 
-    def __init__(self, url: str, ssl_pkey: str | bool = False):
+    def __init__(self, url: str, ssl_cert: str | bool = False):
         self.url = url
-        self.ssl_pkey = ssl_pkey
+        self.ssl_cert = ssl_cert
 
     def check_key(self, key: str, fingerprint: str) -> httpx.Response:
         """Send **check key** request"""
         return httpx.request('GET', f"{self.url}/check_license",
-                             verify=self.ssl_pkey,
+                             verify=self.ssl_cert,
                              json={"license_key": key, "fingerprint": fingerprint},
                              timeout=self.TIMEOUT)
 
     def keepalive(self, session_id: str) -> httpx.Response:
         """Send **keepalive** request"""
         return httpx.request('GET', f"{self.url}/keepalive",
-                             verify=self.ssl_pkey,
+                             verify=self.ssl_cert,
                              json={"session_id": session_id},
                              timeout=self.TIMEOUT)
 
     def end_session(self, session_id: str) -> httpx.Response:
         """Send **end session** request"""
         return httpx.request('GET', f"{self.url}/end_session",
-                             verify=self.ssl_pkey,
+                             verify=self.ssl_cert,
                              json={"session_id": session_id},
                              timeout=self.TIMEOUT)
 

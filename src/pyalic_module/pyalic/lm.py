@@ -93,7 +93,7 @@ class LicenseManager:
         """
         self.session_id = None
         self.auto_keepalive_sender = AutoKeepaliveSender(lm=self)
-        self.api = SecureApiWrapper(url=root_url, ssl_pkey=False if ssl_public_key is None else ssl_public_key)
+        self.api = SecureApiWrapper(url=root_url, ssl_cert=False if ssl_public_key is None else ssl_public_key)
 
     def check_key(self, key: str) -> response.LicenseCheckResponse:
         """

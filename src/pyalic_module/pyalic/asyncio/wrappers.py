@@ -12,10 +12,10 @@ class AsyncApiWrapper:
     """Pyalic API asynchronous wrapper"""
     TIMEOUT = 20
 
-    def __init__(self, url: str, ssl_ca: str | bool):
+    def __init__(self, url: str, ssl_cert: str | bool):
         self.url = url
-        if ssl_ca:
-            self.ssl_context = ssl.create_default_context(cafile=ssl_ca)
+        if ssl_cert:
+            self.ssl_context = ssl.create_default_context(cafile=ssl_cert)
         else:
             self.ssl_context = False
 
@@ -73,7 +73,7 @@ class AsyncSecureApiWrapper(AsyncApiWrapper):
                     continue
                 raise RequestFailed from exc  # If attempts limit reached, raise exception
 
-    async def end_client(self, client_id: str) -> httpx.Response:
+    async def end_session(self, client_id: str) -> httpx.Response:
         """Securely send **end client** request"""
         attempted = 0
         while True:

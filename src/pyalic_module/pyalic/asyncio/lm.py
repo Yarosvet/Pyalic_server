@@ -96,7 +96,7 @@ class AsyncLicenseManager:
         """
         self.session_id = None
         self.auto_keepalive_sender = AsyncAutoKeepaliveSender(async_lm=self)
-        self.api = AsyncSecureApiWrapper(url=root_url, ssl_ca=False if ssl_public_key is None else ssl_public_key)
+        self.api = AsyncSecureApiWrapper(url=root_url, ssl_cert=ssl_public_key)
 
     async def check_key(self, key: str) -> response.LicenseCheckResponse:
         """
@@ -105,7 +105,7 @@ class AsyncLicenseManager:
         :return: `LicenseCheckResponse`
         """
         r = await self.api.check_key(key, get_fingerprint())
-        processed_resp = response.process_check_key(r.status, await r.json())
+        processed_resp = response.process_check_key(r.status_code, await r.json())
         # Start sending keepalive packets if needed
         if processed_resp.success and self.ENABLE_AUTO_KEEPALIVE:
             self.auto_keepalive_sender.start()
@@ -120,7 +120,7 @@ class AsyncLicenseManager:
         :return: 'response.OperationResponse`
         """
         r = await self.api.keepalive(self.session_id)
-        return response.process_keepalive(r.status, await r.json())
+        return response.process_keepalive(r.status_code, await r.json())
 
     async def end_session(self) -> response.OperationResponse:
         """
@@ -129,4 +129,4 @@ class AsyncLicenseManager:
         """
         self.auto_keepalive_sender.stop()
         r = await self.api.end_session(self.session_id)
-        return response.process_end_session(r.status, await r.json())
+        return response.process_end_session(r.status_code, await r.json())
