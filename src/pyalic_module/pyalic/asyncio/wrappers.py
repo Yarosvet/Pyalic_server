@@ -1,7 +1,7 @@
 """Asynchronous wrapper for API"""
 import ssl
 import json
-import aiohttp
+import httpx
 
 from ..exceptions import RequestFailed
 
@@ -19,70 +19,70 @@ class AsyncApiWrapper:
         else:
             self.ssl_context = False
 
-    async def check_key(self, key: str, fingerprint: str) -> aiohttp.ClientResponse:
+    async def check_key(self, key: str, fingerprint: str) -> httpx.Response:
         """Send **check key** request"""
-        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=self.ssl_context)) as session:
-            return await session.request('GET',
-                                         f"{self.url}/check_license",
-                                         json={"license_key": key, "fingerprint": fingerprint})
+        async with httpx.AsyncClient(verify=self.ssl_context) as client:
+            return await client.request('GET',
+                                        f"{self.url}/check_license",
+                                        json={"license_key": key, "fingerprint": fingerprint})
 
-    async def keepalive(self, session_id: str) -> aiohttp.ClientResponse:
+    async def keepalive(self, client_id: str) -> httpx.Response:
         """Send **keepalive** request"""
-        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=self.ssl_context)) as session:
-            return await session.request('GET',
-                                         f"{self.url}/keepalive",
-                                         json={"session_id": session_id})
+        async with httpx.AsyncClient(verify=self.ssl_context) as client:
+            return await client.request('GET',
+                                        f"{self.url}/keepalive",
+                                        json={"client_id": client_id})
 
-    async def end_session(self, session_id: str) -> aiohttp.ClientResponse:
-        """Send **end session** request"""
-        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=self.ssl_context)) as session:
-            return await session.request('GET',
-                                         f"{self.url}/end_session",
-                                         json={"session_id": session_id})
+    async def end_client(self, client_id: str) -> httpx.Response:
+        """Send **end client** request"""
+        async with httpx.AsyncClient(verify=self.ssl_context) as client:
+            return await client.request('GET',
+                                        f"{self.url}/end_client",
+                                        json={"client_id": client_id})
 
 
 class AsyncSecureApiWrapper(AsyncApiWrapper):
     """Secure Pyalic API asynchronous wrapper which attempts to get response several times"""
     ATTEMPTS = 3
 
-    async def check_key(self, key: str, fingerprint: str) -> aiohttp.ClientResponse:
+    async def check_key(self, key: str, fingerprint: str) -> httpx.Response:
         """Securely send **check key** request"""
         attempted = 0
         while True:
             attempted += 1
             try:
                 r = await super().check_key(key=key, fingerprint=fingerprint)
-                await r.json()
+                r.json()
                 return r
-            except (aiohttp.ClientError, json.JSONDecodeError) as exc:
+            except (httpx.RequestError, json.JSONDecodeError) as exc:
                 if attempted < self.ATTEMPTS:
                     continue
                 raise RequestFailed from exc  # If attempts limit reached, raise exception
 
-    async def keepalive(self, session_id: str) -> aiohttp.ClientResponse:
+    async def keepalive(self, client_id: str) -> httpx.Response:
         """Securely send **keepalive** request"""
         attempted = 0
         while True:
             attempted += 1
             try:
-                r = await super().keepalive(session_id)
+                r = await super().keepalive(client_id)
                 await r.json()
                 return r
-            except (aiohttp.ClientError, json.JSONDecodeError) as exc:
+            except (httpx.RequestError, json.JSONDecodeError) as exc:
                 if attempted < self.ATTEMPTS:
                     continue
                 raise RequestFailed from exc  # If attempts limit reached, raise exception
 
-    async def end_session(self, session_id: str) -> aiohttp.ClientResponse:
-        """Securely send **end session** request"""
+    async def end_client(self, client_id: str) -> httpx.Response:
+        """Securely send **end client** request"""
         attempted = 0
         while True:
             attempted += 1
             try:
-                r = await super().end_session(session_id)
+                r = await super().end_client(client_id)
                 await r.json()
                 return r
-            except (aiohttp.ClientError, json.JSONDecodeError) as exc:
+            except (httpx.RequestError, json.JSONDecodeError) as exc:
                 if attempted < self.ATTEMPTS:
                     continue
                 raise RequestFailed from exc  # If attempts limit reached, raise exception
