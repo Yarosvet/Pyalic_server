@@ -29,16 +29,16 @@ class AsyncApiWrapper:
     async def keepalive(self, client_id: str) -> httpx.Response:
         """Send **keepalive** request"""
         async with httpx.AsyncClient(verify=self.ssl_context) as client:
-            return await client.request('GET',
+            return await client.request('POST',
                                         f"{self.url}/keepalive",
-                                        json={"client_id": client_id})
+                                        json={"session_id": client_id})
 
-    async def end_client(self, client_id: str) -> httpx.Response:
+    async def end_session(self, client_id: str) -> httpx.Response:
         """Send **end client** request"""
         async with httpx.AsyncClient(verify=self.ssl_context) as client:
-            return await client.request('GET',
-                                        f"{self.url}/end_client",
-                                        json={"client_id": client_id})
+            return await client.request('POST',
+                                        f"{self.url}/end_session",
+                                        json={"session_id": client_id})
 
 
 class AsyncSecureApiWrapper(AsyncApiWrapper):
@@ -66,7 +66,7 @@ class AsyncSecureApiWrapper(AsyncApiWrapper):
             attempted += 1
             try:
                 r = await super().keepalive(client_id)
-                await r.json()
+                r.json()
                 return r
             except (httpx.RequestError, json.JSONDecodeError) as exc:
                 if attempted < self.ATTEMPTS:
@@ -79,8 +79,8 @@ class AsyncSecureApiWrapper(AsyncApiWrapper):
         while True:
             attempted += 1
             try:
-                r = await super().end_client(client_id)
-                await r.json()
+                r = await super().end_session(client_id)
+                r.json()
                 return r
             except (httpx.RequestError, json.JSONDecodeError) as exc:
                 if attempted < self.ATTEMPTS:

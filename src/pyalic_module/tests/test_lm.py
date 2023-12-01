@@ -44,7 +44,7 @@ def test_keepalive(ssl_server):
     lm = LicenseManager(f"https://localhost:{SERVER_PORT}", CERT_FILE)
     lm.session_id = rand_str(16)
     ssl_server.set_response(
-        HTTPRequest(method="GET",
+        HTTPRequest(method="POST",
                     url="/keepalive",
                     request_data={"session_id": lm.session_id}),
         HTTPResponse(response_data={"success": True},
@@ -58,7 +58,7 @@ def test_keepalive_invalid(ssl_server):
     lm = LicenseManager(f"https://localhost:{SERVER_PORT}", CERT_FILE)
     lm.session_id = rand_str(16)
     ssl_server.set_response(
-        HTTPRequest(method="GET",
+        HTTPRequest(method="POST",
                     url="/keepalive",
                     request_data={"session_id": lm.session_id}),
         HTTPResponse(response_data={"detail": "Session not found"}, response_code=404)
@@ -71,7 +71,7 @@ def test_end_session(ssl_server):
     lm = LicenseManager(f"https://localhost:{SERVER_PORT}", CERT_FILE)
     lm.session_id = rand_str(16)
     ssl_server.set_response(
-        HTTPRequest(method="GET",
+        HTTPRequest(method="POST",
                     url="/end_session",
                     request_data={"session_id": lm.session_id}),
         HTTPResponse(response_data={"success": True},
@@ -85,7 +85,7 @@ def test_end_session_invalid(ssl_server):
     lm = LicenseManager(f"https://localhost:{SERVER_PORT}", CERT_FILE)
     lm.session_id = rand_str(16)
     ssl_server.set_response(
-        HTTPRequest(method="GET",
+        HTTPRequest(method="POST",
                     url="/end_session",
                     request_data={"session_id": lm.session_id}),
         HTTPResponse(response_data={"detail": "Session not found"}, response_code=404)
@@ -119,7 +119,7 @@ def test_auto_keepalive(ssl_server):
         print(f"Got keepalive {keepalive_count}")
 
     ssl_server.set_response(
-        HTTPRequest(method="GET",
+        HTTPRequest(method="POST",
                     url="/keepalive",
                     request_data={"session_id": session_id}),
         HTTPResponse(response_data={"success": True},
@@ -161,7 +161,7 @@ def test_auto_keepalive_fail_event(ssl_server):
                      response_code=200)
     )
     ssl_server.set_response(
-        HTTPRequest(method="GET",
+        HTTPRequest(method="POST",
                     url="/keepalive",
                     request_data={"session_id": session_id}),
         HTTPResponse(response_data={"detail": "Session not found"},

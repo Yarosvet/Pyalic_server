@@ -1,12 +1,15 @@
-"""Test SecureApiWrapper class"""
-from ..pyalic.wrappers import SecureApiWrapper
-from . import SERVER_PORT, rand_str, CERT_FILE
-from .server_http import HTTPRequest, HTTPResponse
+"""Test AsyncSecureApiWrapper class"""
+import pytest
+
+from ...pyalic.asyncio.wrappers import AsyncSecureApiWrapper
+from .. import SERVER_PORT, rand_str, CERT_FILE
+from ..server_http import HTTPRequest, HTTPResponse
 
 
 # pylint: disable=duplicate-code
 
-def test_check_key_secure(http_server):
+@pytest.mark.asyncio
+async def test_async_check_key_secure(http_server):
     """Test checking key after one attempt failed"""
     key = rand_str(16)
     fingerprint = rand_str(16)
@@ -21,11 +24,13 @@ def test_check_key_secure(http_server):
                                     "success": True},
                      response_code=200),
     )
-    wrapper = SecureApiWrapper(f"http://localhost:{SERVER_PORT}", False)
-    assert wrapper.check_key(key, fingerprint).json()["success"]
+    wrapper = AsyncSecureApiWrapper(f"http://localhost:{SERVER_PORT}", False)
+    check_resp = await wrapper.check_key(key, fingerprint)
+    assert check_resp.json()["success"]
 
 
-def test_check_key_ssl_enabled(ssl_server):
+@pytest.mark.asyncio
+async def test_check_key_ssl_enabled(ssl_server):
     """Test checking key with SSL enabled"""
     key = rand_str(16)
     fingerprint = rand_str(16)
@@ -39,11 +44,13 @@ def test_check_key_ssl_enabled(ssl_server):
                                     "success": True},
                      response_code=200),
     )
-    wrapper = SecureApiWrapper(f"https://localhost:{SERVER_PORT}", CERT_FILE)
-    assert wrapper.check_key(key, fingerprint).json()["success"]
+    wrapper = AsyncSecureApiWrapper(f"https://localhost:{SERVER_PORT}", CERT_FILE)
+    check_resp = await wrapper.check_key(key, fingerprint)
+    assert check_resp.json()["success"]
 
 
-def test_keepalive_secure(http_server):
+@pytest.mark.asyncio
+async def test_keepalive_secure(http_server):
     """Test sending keepalive packet after one attempt failed"""
     session_id = rand_str(16)
     http_server.fail_first = True
@@ -54,11 +61,13 @@ def test_keepalive_secure(http_server):
         HTTPResponse(response_data={"success": True},
                      response_code=200),
     )
-    wrapper = SecureApiWrapper(f"http://localhost:{SERVER_PORT}", False)
-    assert wrapper.keepalive(session_id).json()["success"]
+    wrapper = AsyncSecureApiWrapper(f"http://localhost:{SERVER_PORT}", False)
+    keepalive_resp = await wrapper.keepalive(session_id)
+    assert keepalive_resp.json()["success"]
 
 
-def test_end_session_secure(http_server):
+@pytest.mark.asyncio
+async def test_end_session_secure(http_server):
     """Test sending end session packet after one attempt failed"""
     session_id = rand_str(16)
     http_server.fail_first = True
@@ -69,5 +78,6 @@ def test_end_session_secure(http_server):
         HTTPResponse(response_data={"success": True},
                      response_code=200),
     )
-    wrapper = SecureApiWrapper(f"http://localhost:{SERVER_PORT}", False)
-    assert wrapper.end_session(session_id).json()["success"]
+    wrapper = AsyncSecureApiWrapper(f"http://localhost:{SERVER_PORT}", False)
+    end_session_resp = await wrapper.end_session(session_id)
+    assert end_session_resp.json()["success"]

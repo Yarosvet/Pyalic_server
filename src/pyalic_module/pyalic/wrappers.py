@@ -25,14 +25,14 @@ class ApiWrapper:
 
     def keepalive(self, session_id: str) -> httpx.Response:
         """Send **keepalive** request"""
-        return httpx.request('GET', f"{self.url}/keepalive",
+        return httpx.request('POST', f"{self.url}/keepalive",
                              verify=self.ssl_cert,
                              json={"session_id": session_id},
                              timeout=self.TIMEOUT)
 
     def end_session(self, session_id: str) -> httpx.Response:
         """Send **end session** request"""
-        return httpx.request('GET', f"{self.url}/end_session",
+        return httpx.request('POST', f"{self.url}/end_session",
                              verify=self.ssl_cert,
                              json={"session_id": session_id},
                              timeout=self.TIMEOUT)
