@@ -96,3 +96,43 @@ def preconfigured_handler_factory() -> type[PreconfiguredHTTPRequestHandler]:
         fail_first: bool = False
 
     return _Handler
+
+
+class CommonResponses:
+    """Common Pyalic server responses"""
+
+    @staticmethod
+    def valid_check_key_response(session_id: str) -> HTTPResponse:
+        """Create correct check_key response"""
+        return HTTPResponse(response_data={"session_id": session_id,
+                                           "additional_content_signature": "",
+                                           "additional_content_product": "",
+                                           "success": True},
+                            response_code=200)
+
+    @staticmethod
+    def valid_keepalive_response() -> HTTPResponse:
+        """Create correct keepalive response"""
+        return HTTPResponse(response_data={"success": True},
+                            response_code=200)
+
+    @staticmethod
+    def valid_end_session_response() -> HTTPResponse:
+        """Create correct end_session response"""
+        return HTTPResponse(response_data={"success": True},
+                            response_code=200)
+
+    @staticmethod
+    def invalid_check_key_response() -> HTTPResponse:
+        """Create invalid check_key response"""
+        return HTTPResponse(response_data={"error": "Invalid license key", "success": False}, response_code=403)
+
+    @staticmethod
+    def invalid_keepalive_response() -> HTTPResponse:
+        """Create invalid keepalive response"""
+        return HTTPResponse(response_data={"detail": "Session not found"}, response_code=404)
+
+    @staticmethod
+    def invalid_end_session_response() -> HTTPResponse:
+        """Create invalid end_session response"""
+        return HTTPResponse(response_data={"detail": "Session not found"}, response_code=404)
