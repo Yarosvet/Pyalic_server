@@ -12,7 +12,7 @@ from .server_http import HTTPRequest, CommonResponses
 def test_check_key_valid(ssl_server):
     """Test checking valid key"""
     lm = LicenseManager(f"https://localhost:{SERVER_PORT}", CERT_FILE)
-    lm.ENABLE_AUTO_KEEPALIVE = False
+    lm.enable_auto_keepalive = False
     key = rand_str(16)
     ssl_server.set_response(
         HTTPRequest(method="GET",
@@ -26,7 +26,7 @@ def test_check_key_valid(ssl_server):
 def test_check_key_invalid(ssl_server):
     """Test checking invalid key"""
     lm = LicenseManager(f"https://localhost:{SERVER_PORT}", CERT_FILE)
-    lm.ENABLE_AUTO_KEEPALIVE = False
+    lm.enable_auto_keepalive = False
     key = rand_str(16)
     ssl_server.set_response(
         HTTPRequest(method="GET",
@@ -92,8 +92,8 @@ def test_end_session_invalid(ssl_server):
 def test_auto_keepalive(ssl_server):
     """Test auto-sending keepalive packets mechanism"""
     lm = LicenseManager(f"https://localhost:{SERVER_PORT}", CERT_FILE)
-    lm.ENABLE_AUTO_KEEPALIVE = True
-    lm.auto_keepalive_sender.INTERVAL = 0.5
+    lm.enable_auto_keepalive = True
+    lm.auto_keepalive_sender.interval = 0.5
     key = rand_str(16)
     session_id = rand_str(16)
     ssl_server.set_response(
@@ -122,21 +122,22 @@ def test_auto_keepalive(ssl_server):
     time.sleep(2)
     assert keepalive_count >= 4
     lm.auto_keepalive_sender.stop()
-    time.sleep(lm.auto_keepalive_sender.INTERVAL)
+    time.sleep(lm.auto_keepalive_sender.interval)
     assert not lm.auto_keepalive_sender.alive
 
 
 def test_auto_keepalive_fail_event(ssl_server):
     """Test auto-sending keepalive packets mechanism with invalid session id"""
     lm = LicenseManager(f"https://localhost:{SERVER_PORT}", CERT_FILE)
-    lm.ENABLE_AUTO_KEEPALIVE = True
-    lm.auto_keepalive_sender.INTERVAL = 0.5
+    lm.enable_auto_keepalive = True
+    lm.auto_keepalive_sender.interval = 0.5
     bad_flag = False
 
     def got_bad_keepalive(operation_response, exc):  # pylint: disable=unused-argument
         nonlocal bad_flag
         bad_flag = True
 
+    # When got bad keepalive, set bad_flag to True
     lm.auto_keepalive_sender.set_event_bad_keepalive(got_bad_keepalive)
     key = rand_str(16)
     session_id = rand_str(16)
@@ -154,6 +155,6 @@ def test_auto_keepalive_fail_event(ssl_server):
     )
     check_resp = lm.check_key(key)
     assert check_resp.success
-    time.sleep(lm.auto_keepalive_sender.INTERVAL)
+    time.sleep(lm.auto_keepalive_sender.interval)
     assert not lm.auto_keepalive_sender.alive
     assert bad_flag

@@ -17,7 +17,7 @@ class CallableBadKeepaliveEvent(typing.Protocol):  # pylint: disable=missing-cla
 class AutoKeepaliveSender:
     """Automatic keep-alive packets sender"""
 
-    INTERVAL = 2  # pylint: disable=duplicate-code
+    interval = 2  # pylint: disable=duplicate-code
 
     alive = False
     _stop_flag = False
@@ -45,7 +45,7 @@ class AutoKeepaliveSender:
             while resp.success and not self._stop_flag:
                 # Keep interval between requests
                 time_past = time.time() - last_sent
-                time.sleep(self.INTERVAL - time_past if self.INTERVAL > time_past else 0)
+                time.sleep(self.interval - time_past if self.interval > time_past else 0)
                 # Keepalive
                 last_sent = time.time()
                 resp = self.lm.keep_alive()
@@ -83,7 +83,7 @@ class AutoKeepaliveSender:
 
 class LicenseManager:
     """Synchronous License Manager"""
-    ENABLE_AUTO_KEEPALIVE = True
+    enable_auto_keepalive = True
 
     def __init__(self, root_url: str, ssl_public_key: str | None = None):
         """
@@ -106,7 +106,7 @@ class LicenseManager:
         # Save session ID
         self.session_id = processed_resp.session_id
         # Start sending keepalive packets if needed
-        if processed_resp.success and self.ENABLE_AUTO_KEEPALIVE:
+        if processed_resp.success and self.enable_auto_keepalive:
             self.auto_keepalive_sender.start()
         return processed_resp
 

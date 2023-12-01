@@ -18,7 +18,7 @@ class CallableBadKeepaliveEventAsync(typing.Protocol):  # pylint: disable=missin
 class AsyncAutoKeepaliveSender:
     """Asynchronous automatic keep-alive packets sender"""
 
-    INTERVAL = 2
+    interval = 2
 
     alive = False
     _stop_flag = False
@@ -46,7 +46,7 @@ class AsyncAutoKeepaliveSender:
             while resp.success and not self._stop_flag:
                 # Keep interval between requests
                 time_past = time.time() - last_sent
-                await asyncio.sleep(self.INTERVAL - time_past if self.INTERVAL > time_past else 0)
+                await asyncio.sleep(self.interval - time_past if self.interval > time_past else 0)
                 # Keepalive
                 last_sent = time.time()
                 resp = await self.lm.keep_alive()
@@ -86,7 +86,7 @@ class AsyncAutoKeepaliveSender:
 class AsyncLicenseManager:
     """Asynchronous license manager"""
 
-    ENABLE_AUTO_KEEPALIVE = True
+    enable_auto_keepalive = True
 
     def __init__(self, root_url: str, ssl_public_key: str | None = None):
         """
@@ -107,7 +107,7 @@ class AsyncLicenseManager:
         r = await self.api.check_key(key, get_fingerprint())
         processed_resp = response.process_check_key(r.status_code, r.json())
         # Start sending keepalive packets if needed
-        if processed_resp.success and self.ENABLE_AUTO_KEEPALIVE:
+        if processed_resp.success and self.enable_auto_keepalive:
             self.auto_keepalive_sender.start()
         # Save session ID
         self.session_id = processed_resp.session_id
