@@ -103,11 +103,11 @@ class LicenseManager:
         """
         r = self.api.check_key(key, get_fingerprint())
         processed_resp = response.process_check_key(r.status_code, r.json())
+        # Save session ID
+        self.session_id = processed_resp.session_id
         # Start sending keepalive packets if needed
         if processed_resp.success and self.ENABLE_AUTO_KEEPALIVE:
             self.auto_keepalive_sender.start()
-        # Save session ID
-        self.session_id = processed_resp.session_id
         return processed_resp
 
     def keep_alive(self) -> response.OperationResponse:
