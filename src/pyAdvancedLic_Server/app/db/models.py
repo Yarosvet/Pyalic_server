@@ -1,3 +1,4 @@
+"""SQLAlchemy ORM models placed here"""
 from sqlalchemy import Column, BigInteger, Integer, Interval, Text, DateTime, orm, ForeignKey, Table
 
 from . import SqlAlchemyBase
@@ -12,6 +13,7 @@ user_product_table = Table(
 
 
 class Signature(SqlAlchemyBase):
+    """Signature Model for SQLAlchemy"""
     __tablename__ = "signatures"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
@@ -27,6 +29,7 @@ class Signature(SqlAlchemyBase):
 
 
 class Product(SqlAlchemyBase):
+    """Product Model for SQLAlchemy"""
     __tablename__ = "products"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
@@ -42,6 +45,7 @@ class Product(SqlAlchemyBase):
 
 
 class Installation(SqlAlchemyBase):
+    """Installation Model for SQLAlchemy"""
     __tablename__ = "installations"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
@@ -52,6 +56,7 @@ class Installation(SqlAlchemyBase):
 
 
 class User(SqlAlchemyBase):
+    """User Model for SQLAlchemy"""
     __tablename__ = "users"
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     username = Column(Text, nullable=False)
@@ -64,7 +69,13 @@ class User(SqlAlchemyBase):
     master = orm.relationship('User', backref='slaves', remote_side='User.id', lazy='joined')
 
     def get_permissions(self) -> Permissions:
+        """
+        :return: Permissions object interpretation
+        """
         return Permissions(self.permissions)
 
     def get_verifiable_permissions(self) -> VerifiablePermissions:
+        """
+        :return: VerifiablePermissions object interpretation
+        """
         return VerifiablePermissions(self)

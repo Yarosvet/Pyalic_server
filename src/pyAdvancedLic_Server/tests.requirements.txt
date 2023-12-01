@@ -1,0 +1,4 @@
+pytest
+httpx
+psycopg2-binary
+sqlalchemy

@@ -1,9 +1,10 @@
-from dotenv import load_dotenv
+"""Configuration variables from environment"""
 from os import path, environ
+from dotenv import load_dotenv
 
 LOG_FILE = "lic_server.log"
-if path.exists(path.join(path.dirname(__file__), '../.env')):
-    load_dotenv(path.join(path.dirname(__file__), '../.env'))
+if path.exists(path.join(path.dirname(__file__), '../../../.env')):
+    load_dotenv(path.join(path.dirname(__file__), '../../../.env'))
 DB_HOST = environ.get('DB_HOST')
 DB_USER = environ.get('DB_USER')
 DB_PASSWORD = environ.get('DB_PASSWORD')
@@ -22,3 +23,5 @@ ACCESS_TOKEN_EXPIRE_MINUTES = environ.get('ACCESS_TOKEN_EXPIRE_MINUTES', default
 
 DEFAULT_USER = environ.get('DEFAULT_USER')
 DEFAULT_PASSWORD = environ.get('DEFAULT_PASSWORD')
+
+LOGGING_ENABLED = bool(int(environ.get('LOGGING_ENABLED', default=1)))

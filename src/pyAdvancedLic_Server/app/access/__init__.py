@@ -1,3 +1,6 @@
+"""
+Managing access and permissions
+"""
 from sqlalchemy.future import select
 from sqlalchemy import func
 
@@ -8,9 +11,14 @@ from .permissions import SUPERUSER
 
 
 async def create_default_user_if_not_exists():
+    """
+    Creates a user with default username and password if no any users exist
+    :return:
+    """
+    # Getting quantity of users in DB
     session = await anext(create_session())
     r = await session.execute(select(func.count()).select_from(models.User))
-    if r.scalar() == 0:
+    if r.scalar() == 0:  # If not exists
         u = models.User(username=config.DEFAULT_USER,
                         hashed_password=get_password_hash(config.DEFAULT_PASSWORD),
                         permissions=SUPERUSER)

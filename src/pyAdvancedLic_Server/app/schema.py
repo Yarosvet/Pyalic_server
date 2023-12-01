@@ -1,21 +1,27 @@
-from pydantic import BaseModel, root_validator
+"""
+Pydantic schemas
+"""
+from typing import Any
+from pydantic import BaseModel  # pylint: disable=no-name-in-module
 
 
 class UnspecifiedModel(BaseModel):
-    _unspecified = []
+    """
+    Model with nullable fields;
+    If field really was not specified its name will be in `UnspecifiedModel.unspecified_fields`
+    """
+    __slots__ = ('unspecified_fields',)
 
-    @root_validator(pre=True)
-    def mark_as_unspecified(cls, values: dict):
-        for field in cls.__fields__:
-            print(field)
-            if field not in values.keys():
-                cls._unspecified.append(field)
-        return values
+    def __init__(self, **data: Any):
+        super().__init__(**data)
+        unspecified = set()
+        for field in self.__fields__:
+            if field not in data:
+                unspecified.add(field)
+        object.__setattr__(self, 'unspecified_fields', unspecified)
 
-    @property
-    def unspecified_fields(self) -> list[str]:
-        return self._unspecified
 
+# pylint: disable=missing-class-docstring
 
 class ShortProduct(BaseModel):
     name: str
@@ -77,8 +83,8 @@ class GetSignature(ShortSignature):
 class AddSignature(BaseModel):
     product_id: int
     license_key: str
-    additional_content: str
-    comment: str
+    additional_content: str = ""
+    comment: str = ""
     activate: bool = False
 
 

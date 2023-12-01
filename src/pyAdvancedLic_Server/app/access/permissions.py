@@ -1,30 +1,41 @@
-from ..db import models
+"""
+Interaction with permissions of Users
+"""
+from ..db import models  # pylint: disable=cyclic-import
 
 DEFAULT_PERMISSIONS = "manage_own_products,manage_own_users"
 SUPERUSER = "superuser"
 
 
 class InvalidPermissionsString(Exception):
-    pass
+    """
+    Permissions string contains invalid characters or non-existent permission values
+    """
 
 
 ALL_PERMISSIONS = ['superuser', 'manage_own_products', 'manage_other_products', 'read_other_products',
                    'create_users', 'manage_own_users', 'manage_other_users']
 
 
+# pylint: disable=C0116
+
 class Permissions:
+    """
+    Object interpretation of permissions
+    """
+
     def __init__(self, s: str):
         """
         User's permissions class
         :param s: Permissions string
         """
         self._validate(s)
-        self._permissions = s.split(',')
+        self._permissions = [el.strip() for el in s.split(',') if el.strip()]
 
     @staticmethod
     def _validate(s: str):
         for el in s.split(','):
-            if el not in ALL_PERMISSIONS:
+            if el and el not in ALL_PERMISSIONS:
                 raise InvalidPermissionsString(el)
 
     def __str__(self) -> str:
@@ -60,6 +71,10 @@ class Permissions:
 
 
 class VerifiablePermissions(Permissions):
+    """
+    Interpretation of permissions where realized logic of what actions exactly you are able to perform
+    """
+
     def __init__(self, u: 'models.User'):
         super().__init__(u.permissions)
         self._u = u
@@ -86,8 +101,8 @@ class VerifiablePermissions(Permissions):
             return False
         for p in perm_obj:
             if p not in self._u.get_permissions() and not self.is_superuser():
-                return False
-        return self.can_manage_own_users()
+                return False  # If someone tries to abuse his permissions and escalate privileges
+        return self.can_create_users()
 
     def able_edit_user(self, u: 'models.User', permissions: str | None = None) -> bool:
         if permissions is not None:
@@ -97,14 +112,16 @@ class VerifiablePermissions(Permissions):
                 return False
             for p in perm_obj:
                 if p not in self._u.get_permissions() and not self.is_superuser():
-                    return False
-        if u.master != self._u:
+                    return False  # If someone tries to abuse his permissions and escalate privileges
+        if u.master != self._u:  # If it's not current users product
+            # Requires permission to manage others products
             return self.can_manage_other_users()
         return self.can_manage_own_users()
 
     def able_delete_user(self, u: 'models.User') -> bool:
         if u == self._u:
-            return False
+            return False  # You cannot delete yourself
         if u.master != self._u:
+            # If you want to delete the user you don't own, required appropriate permission
             return self.can_manage_other_users()
         return self.can_manage_own_users()

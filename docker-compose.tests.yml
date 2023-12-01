@@ -1,13 +1,14 @@
 version: "3.8"
 
 services:
-  lic_server:
+  test_lic_server:
     build:
-      context: src/pyAdvancedLic_Server
+      context: src/pyAdvancedLic_Server/
       dockerfile: Dockerfile
-      target: prod
+      target: tests
     env_file: .env
     environment:
+      LOGGING_ENABLED: 0
       DB_HOST: postgresql:5432
       DB_USER: lic_server
       DB_PASSWORD: "${DB_PASSWORD:-db_password}"
@@ -32,22 +33,10 @@ services:
       redis:
         condition: service_started
 
-  nginx:
-    build: src/nginx
-    ports:
-      - "8000:80"
-      - "5443:443"
-    depends_on:
-      - lic_server
-    volumes:
-      - /etc/ssl/lic_server:/etc/ssl/lic_server
-
   postgresql:
     image: "postgres:15-alpine"
     expose:
       - 5432
-    volumes:
-      - postgres_data:/var/lib/postgresql/data/
     env_file: .env
     environment:
       POSTGRES_USER: lic_server
@@ -56,21 +45,15 @@ services:
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U lic_server -d advanced_lic" ]
       timeout: 5s
-      interval: 2s
-      retries: 3
+      interval: 1s
+      retries: 6
 
   redis:
     image: "redis:alpine"
     expose:
       - 6379
     restart: always
-    volumes:
-      - redis_data:/data
     env_file: .env
     environment:
       REDIS_PASSWORD: "${REDIS_PASSWORD:-redis_password}"
     command: redis-server --save 1 30 --loglevel warning --requirepass "${REDIS_PASSWORD}"
-
-volumes:
-  postgres_data:
-  redis_data:

@@ -1,3 +1,6 @@
+"""
+Licensing and sessions mechanics placed here
+"""
 from redis.asyncio import Redis
 
 from .. import config
