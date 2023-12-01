@@ -21,6 +21,7 @@ class HTTPResponse:
     """HTTP response model"""
     response_data: dict
     response_code: int = 200
+    content_type: str = "application/json"
 
     def __hash__(self):
         return hash((self.response_data, self.response_code))
@@ -28,9 +29,9 @@ class HTTPResponse:
 
 class PreconfiguredHTTPRequestHandler(BaseHTTPRequestHandler):
     """Handle HTTP requests with preconfigured responses"""
-    _mapping = {}
-    _events = {}
-    fail_first = False
+    _mapping: typing.Dict[HTTPRequest, HTTPResponse] = {}
+    _events: typing.Dict[HTTPRequest, typing.Callable] = {}
+    fail_first: bool = False
 
     @classmethod
     def set_response(cls, request: HTTPRequest, response: HTTPResponse, event: typing.Callable = None):
@@ -59,7 +60,7 @@ class PreconfiguredHTTPRequestHandler(BaseHTTPRequestHandler):
                     req.url == self.path and \
                     json.loads(json.dumps(req.request_data)) == content:
                 self.send_response(resp.response_code)
-                self.send_header('Content-type', 'text/html')
+                self.send_header('Content-type', resp.content_type)
                 self.end_headers()
                 self.wfile.write(json.dumps(resp.response_data).encode('utf-8'))
                 if req in self._events:
@@ -90,8 +91,8 @@ def preconfigured_handler_factory() -> type[PreconfiguredHTTPRequestHandler]:
     """Create new preconfigured HTTP request handler"""
 
     class _Handler(PreconfiguredHTTPRequestHandler):
-        _mapping = {}
-        _events = {}
-        fail_first = False
+        _mapping: typing.Dict[HTTPRequest, HTTPResponse] = {}
+        _events: typing.Dict[HTTPRequest, typing.Callable] = {}
+        fail_first: bool = False
 
     return _Handler
