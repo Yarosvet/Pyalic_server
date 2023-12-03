@@ -11,7 +11,8 @@ from .wrappers import SecureApiWrapper
 
 class CallableBadKeepaliveEvent(typing.Protocol):  # pylint: disable=missing-class-docstring
     def __call__(self, operation_response: response.OperationResponse = None,
-                 exc: Exception = None) -> typing.Any: ...
+                 exc: Exception = None) -> typing.Any:
+        ...
 
 
 class AutoKeepaliveSender:

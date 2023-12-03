@@ -12,7 +12,8 @@ from ..fingerprint import get_fingerprint
 class CallableBadKeepaliveEventAsync(typing.Protocol):  # pylint: disable=missing-class-docstring
     def __call__(self,
                  operation_response: response.OperationResponse = None,
-                 exc: Exception = None) -> typing.Awaitable: ...
+                 exc: Exception = None) -> typing.Awaitable:
+        ...
 
 
 class AsyncAutoKeepaliveSender:
