@@ -3,7 +3,7 @@ version: "3.8"
 services:
   lic_server:
     build:
-      context: src/pyAdvancedLic_Server
+      context: src/Pyalic_Server
       dockerfile: Dockerfile
       target: prod
     env_file: .env
