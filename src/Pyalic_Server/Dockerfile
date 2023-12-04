@@ -1,6 +1,6 @@
 FROM python:3.11-alpine as prod
 
-WORKDIR /opt/pyAdvancedLic_Server
+WORKDIR /opt/Pyalic_Server
 
 ADD app app
 ADD requirements.txt requirements.txt
@@ -11,7 +11,7 @@ CMD gunicorn -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000 app:app
 
 
 FROM python:3.11-alpine as tests
-WORKDIR /opt/pyAdvancedLic
+WORKDIR /opt/Pyalic_Server
 
 ADD app app
 ADD tests tests
