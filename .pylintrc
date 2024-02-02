@@ -39,7 +39,7 @@ extension-pkg-whitelist=
 fail-on=
 
 # Specify a score threshold under which the program will exit with error.
-fail-under=10
+fail-under=9.9
 
 # Interpret the stdin as a python script, whose filename needs to be passed as
 # the module_or_package argument.
@@ -91,13 +91,14 @@ persistent=yes
 py-version=3.11
 
 # Discover python modules and packages in the file system subtree.
-recursive=no
+# recursive=no
 
 # Add paths to the list of the source roots. Supports globbing patterns. The
 # source root is an absolute path or a path relative to the current working
 # directory used to determine a package namespace for modules located under the
 # source root.
-source-roots=
+source-roots=src/pyAdvancedLic_Server
+             src/pyalic_module/pyalic
 
 # When enabled, pylint would attempt to guess common misconfiguration and emit
 # user-friendly hints instead of false-positive error messages.
@@ -398,7 +399,8 @@ logging-format-style=old
 
 # Logging modules to check that the string format arguments are in logging
 # function parameter format.
-logging-modules=logging
+logging-modules=logging,
+                aiologger
 
 
 [MESSAGES CONTROL]

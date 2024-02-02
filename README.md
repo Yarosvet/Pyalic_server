@@ -2,35 +2,7 @@
 
 Licensing server which allows you to manage access to your products
 
-# Install python API wrapper
-
-Install package using `pip` from this GitHub repository
-
-```shell
-pip install git+https://github.com/Yarosvet/pyAdvancedLic#subdirectory=src/pyalic_module
-```
-
-# Python example
-
-```python
-from pyalic import LicenseManager
-import time
-
-lm = LicenseManager("https://LICENSE_SERVER_URL.ORG", ssl_public_key='./trusted_cert.pem')
-
-
-def my_program():
-    print("Access granted!")
-    time.sleep(30)
-
-
-key = input("Enter your license key: ")
-if lm.check_key(key):
-    my_program()
-    lm.end_session()
-else:
-    print("Access denied:", lm.status)
-```
+(Python module available on https://github.com/Yarosvet/Pyalic_py)
 
 # Install server  in Docker
 
@@ -68,11 +40,13 @@ docker compose -d up
 
 # Run tests
 
-There is a Dockerfile for running tests in Docker. So you can run following:
+There is a Dockerfile for running tests in Docker with needed services. So you should run following:
 
 ```shell
 docker compose -f docker-compose.tests.yml up --build --exit-code-from test_lic_server
 ```
 
-Or if you want to run tests without docker, you must install requirements from `src/tests/requirements.txt`.
-Then place `src/tests/run_tests.py` to the root folder of project and run it.
+Or if you want to run tests without docker, you must install requirements from `src/tests/requirements.txt`, setup
+PostgreSQL database and Redis server.
+Pass credentials using environment variables (see `config.py` to get names)
+Then tun `pytest` in `Pyalic_Server` directory.

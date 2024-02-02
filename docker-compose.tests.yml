@@ -3,7 +3,7 @@ version: "3.8"
 services:
   test_lic_server:
     build:
-      context: src/pyAdvancedLic_Server/
+      context: src/Pyalic_Server/
       dockerfile: Dockerfile
       target: tests
     env_file: .env

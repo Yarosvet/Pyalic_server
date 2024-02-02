@@ -1,0 +1,14 @@
+sqlalchemy==2.0.25
+asyncpg
+fastapi==0.109.0
+python-dotenv
+pydantic==2.6.0
+uvicorn==0.27.0
+redis
+aiologger
+aiofiles
+gunicorn
+passlib[bcrypt]
+bcrypt
+python-jose[cryptography]
+python-multipart
