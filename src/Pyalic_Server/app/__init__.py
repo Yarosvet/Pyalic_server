@@ -4,6 +4,7 @@ Python Advanced Licensing System server
 """
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from .routers import admin, user
 from . import loggers, db, config
@@ -19,6 +20,17 @@ async def lifespan(application: FastAPI):  # pylint: disable=unused-argument
 
 
 app = FastAPI(lifespan=lifespan)
+
+# CORS
+origins = ["*"]
+app.add_middleware(
+    CORSMiddleware,  # noqa
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(admin.router, prefix='/admin')
 app.include_router(admin.public_router, prefix='/admin')
 app.include_router(user.router)
