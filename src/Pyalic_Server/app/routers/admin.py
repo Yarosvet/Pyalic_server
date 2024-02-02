@@ -3,7 +3,7 @@ Routers for only admin access
 """
 from datetime import timedelta, datetime
 from copy import copy
-from fastapi import APIRouter, HTTPException, Depends, status, security
+from fastapi import APIRouter, HTTPException, Depends, status, security, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
@@ -35,13 +35,13 @@ async def _get_user(current_user: schema.User, session: AsyncSession) -> models.
     return user_in_db
 
 
-@router.get("/interact_product", response_model=schema.GetProduct)
-async def get_product(payload: schema.IdField,
+@router.get("/product", response_model=schema.GetProduct)
+async def get_product(p_id: int = Query(alias="id"),
                       session: AsyncSession = Depends(session_dep),
                       current_user: schema.User = Depends(auth.get_current_user)):
     """Request handler for getting product"""
     # Get product from DB
-    r = await session.execute(select(models.Product).filter_by(id=payload.id).options(
+    r = await session.execute(select(models.Product).filter_by(id=p_id).options(
         selectinload(models.Product.signatures)))
     p = r.scalar_one_or_none()
     if p is None:  # If not exists
@@ -57,7 +57,7 @@ async def get_product(payload: schema.IdField,
                              additional_content=p.additional_content, id=p.id, signatures=len(p.signatures))
 
 
-@router.post("/interact_product", response_model=schema.GetProduct)
+@router.post("/product", response_model=schema.GetProduct)
 async def add_product(payload: schema.AddProduct,
                       session: AsyncSession = Depends(session_dep),
                       current_user: schema.User = Depends(auth.get_current_user)):
@@ -91,13 +91,14 @@ async def add_product(payload: schema.AddProduct,
                              additional_content=p.additional_content, id=p.id, signatures=0)
 
 
-@router.put("/interact_product", response_model=schema.GetProduct)
+@router.put("/product", response_model=schema.GetProduct)
 async def update_product(payload: schema.UpdateProduct,
+                         p_id: int = Query(alias="id"),
                          session: AsyncSession = Depends(session_dep),
                          current_user: schema.User = Depends(auth.get_current_user)):
     """Request handler for updating existing product"""
     # Get product
-    r = await session.execute(select(models.Product).filter_by(id=payload.id).options(
+    r = await session.execute(select(models.Product).filter_by(id=p_id).options(
         selectinload(models.Product.signatures)))
     p = r.scalar_one_or_none()
     if p is None:  # If not exists
@@ -132,13 +133,13 @@ async def update_product(payload: schema.UpdateProduct,
                              additional_content=p.additional_content, id=p.id, signatures=len(p.signatures))
 
 
-@router.delete("/interact_product", response_model=schema.Successful)
-async def delete_product(payload: schema.IdField,
+@router.delete("/product", response_model=schema.Successful)
+async def delete_product(p_id: int = Query(alias="id"),
                          session: AsyncSession = Depends(session_dep),
                          current_user: schema.User = Depends(auth.get_current_user)):
     """Request handler for deleting existing product"""
     # Get product with all relations
-    r = await session.execute(select(models.Product).filter_by(id=payload.id).options(
+    r = await session.execute(select(models.Product).filter_by(id=p_id).options(
         selectinload(models.Product.signatures).selectinload(models.Signature.installations)))
     p = r.scalar_one_or_none()
     if p is None:  # If not exists
@@ -163,11 +164,11 @@ async def delete_product(payload: schema.IdField,
 
 
 @router.get("/list_products", response_model=schema.ListProducts)
-async def list_products(payload: schema.ProductsLimitOffset, session: AsyncSession = Depends(session_dep)):
+async def list_products(limit: int = 100, offset: int = 0, session: AsyncSession = Depends(session_dep)):
     """Request handler for getting list of all products"""
     # Get all products from DB
     r = await session.execute(
-        select(models.Product).order_by(models.Product.id).offset(payload.offset).limit(payload.limit).options(
+        select(models.Product).order_by(models.Product.id).offset(offset).limit(limit).options(
             selectinload(models.Product.signatures)))
     p_list = []
     # List them
@@ -180,12 +181,14 @@ async def list_products(payload: schema.ProductsLimitOffset, session: AsyncSessi
 
 
 @router.get("/list_signatures", response_model=schema.ListSignatures)
-async def list_signatures(payload: schema.SignaturesLimitOffset,
+async def list_signatures(product_id: int,
+                          limit: int = 100,
+                          offset: int = 0,
                           session: AsyncSession = Depends(session_dep),
                           current_user: schema.User = Depends(auth.get_current_user)):
     """Request handler for getting list of signatures of specified product"""
     # Get product from DB
-    r = await session.execute(select(models.Product).filter_by(id=payload.product_id))
+    r = await session.execute(select(models.Product).filter_by(id=product_id))
     p = r.scalar_one_or_none()
     if p is None:  # If not exists
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
@@ -194,23 +197,23 @@ async def list_signatures(payload: schema.SignaturesLimitOffset,
     if not user_in_db.get_verifiable_permissions().able_get_product(p):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You have no permission")
     # Get signatures
-    r = await session.execute(select(models.Signature).filter_by(product_id=payload.product_id)
-                              .order_by(models.Signature.id).offset(payload.offset).limit(payload.limit))
+    r = await session.execute(select(models.Signature).filter_by(product_id=product_id)
+                              .order_by(models.Signature.id).offset(offset).limit(limit))
     sig_list = []
     for sig in r.scalars():
         sig_list.append(schema.ShortSignature(comment=sig.comment, id=sig.id))
     # Return list of signatures
-    return schema.ListSignatures(items=len(sig_list), signatures=sig_list, product_id=payload.product_id)
+    return schema.ListSignatures(items=len(sig_list), signatures=sig_list, product_id=product_id)
 
 
-@router.get("/interact_signature", response_model=schema.GetSignature)
-async def get_signature(payload: schema.IdField,
+@router.get("/signature", response_model=schema.GetSignature)
+async def get_signature(s_id: int = Query(alias="id"),
                         session: AsyncSession = Depends(session_dep),
                         current_user: schema.User = Depends(auth.get_current_user)):
     """Request handler for getting signature info"""
     # Get signature from DB
     r = await session.execute(
-        select(models.Signature).filter_by(id=payload.id).options(
+        select(models.Signature).filter_by(id=s_id).options(
             selectinload(models.Signature.installations), selectinload(models.Signature.product)))
     sig = r.scalar_one_or_none()
     if sig is None:  # If not exists
@@ -226,7 +229,7 @@ async def get_signature(payload: schema.IdField,
                                activation_date=act_date)
 
 
-@router.post("/interact_signature", response_model=schema.GetSignature)
+@router.post("/signature", response_model=schema.GetSignature)
 async def add_signature(payload: schema.AddSignature,
                         session: AsyncSession = Depends(session_dep),
                         current_user: schema.User = Depends(auth.get_current_user)):
@@ -259,14 +262,15 @@ async def add_signature(payload: schema.AddSignature,
                                comment=sig.comment, installed=0, product_id=sig.product_id, activation_date=act_date)
 
 
-@router.put("/interact_signature", response_model=schema.GetSignature)
+@router.put("/signature", response_model=schema.GetSignature)
 async def update_signature(payload: schema.UpdateSignature,
+                           s_id: int = Query(alias="id"),
                            session: AsyncSession = Depends(session_dep),
                            current_user: schema.User = Depends(auth.get_current_user)):
     """Request handler for updating an existing signature"""
     # Get signature from db
     r = await session.execute(
-        select(models.Signature).filter_by(id=payload.id).options(
+        select(models.Signature).filter_by(id=s_id).options(
             selectinload(models.Signature.installations), selectinload(models.Signature.product)))
     sig = r.scalar_one_or_none()
     if sig is None:  # If not exists
@@ -298,18 +302,18 @@ async def update_signature(payload: schema.UpdateSignature,
                                activation_date=act_date)
 
 
-@router.delete("/interact_signature", response_model=schema.Successful)
-async def delete_signature(payload: schema.IdField,
+@router.delete("/signature", response_model=schema.Successful)
+async def delete_signature(s_id: int = Query(alias="id"),
                            session: AsyncSession = Depends(session_dep),
                            current_user: schema.User = Depends(auth.get_current_user)):
     """Request handler for deleting an existing signature"""
     # Get signature form DB
-    r = await session.execute(select(models.Signature).filter_by(id=payload.id))
+    r = await session.execute(select(models.Signature).filter_by(id=s_id))
     sig = r.scalar_one_or_none()
     if sig is None:  # If not exists
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Signature not found")
     # If exists, get it with relations
-    r = await session.execute(select(models.Signature).filter_by(id=payload.id)
+    r = await session.execute(select(models.Signature).filter_by(id=s_id)
                               .options(selectinload(models.Signature.installations),
                                        selectinload(models.Signature.product)))
     sig = r.scalar_one_or_none()
@@ -353,9 +357,9 @@ async def users_me(current_user: schema.User = Depends(auth.get_current_user)):
 
 
 @router.get("/users/list", response_model=schema.ListUsers)
-async def list_users(payload: schema.UsersLimitOffset, session: AsyncSession = Depends(session_dep)):
+async def list_users(limit: int = 100, offset: int = 0, session: AsyncSession = Depends(session_dep)):
     """Request handler for getting list of all users"""
-    r = await session.execute(select(models.User).order_by(models.User.id).offset(payload.offset).limit(payload.limit))
+    r = await session.execute(select(models.User).order_by(models.User.id).offset(offset).limit(limit))
     users = []
     # List all users
     for u in r.scalars():
@@ -363,19 +367,19 @@ async def list_users(payload: schema.UsersLimitOffset, session: AsyncSession = D
     return schema.ListUsers(items=len(users), users=users)
 
 
-@router.get("/users/interact_user", response_model=schema.ExpandedUser)
-async def get_user(payload: schema.UserId,
+@router.get("/users/user", response_model=schema.ExpandedUser)
+async def get_user(u_id: int = Query(alias="id"),
                    session: AsyncSession = Depends(session_dep)):
     """Request handler for getting User by his ID"""
     # Get user from DB
-    r = await session.execute(select(models.User).filter_by(id=payload.id))
+    r = await session.execute(select(models.User).filter_by(id=u_id))
     u = r.scalar_one_or_none()
     if u is None:  # If not exists
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return schema.ExpandedUser(id=u.id, username=u.username, master_id=u.master_id, permissions=u.permissions)
 
 
-@router.post("/users/interact_user", response_model=schema.ExpandedUser)
+@router.post("/users/user", response_model=schema.ExpandedUser)
 async def add_user(payload: schema.AddUser,
                    session: AsyncSession = Depends(session_dep),
                    current_user: schema.User = Depends(auth.get_current_user)):
@@ -400,13 +404,14 @@ async def add_user(payload: schema.AddUser,
     return schema.ExpandedUser(id=u.id, username=u.username, master_id=u.master_id, permissions=u.permissions)
 
 
-@router.put("/users/interact_user", response_model=schema.ExpandedUser)
+@router.put("/users/user", response_model=schema.ExpandedUser)
 async def update_user(payload: schema.UpdateUser,
+                      u_id: int = Query(alias="id"),
                       session: AsyncSession = Depends(session_dep),
                       current_user: schema.User = Depends(auth.get_current_user)):
     """Request handler for updating an existing user"""
     # Get user form db
-    r = await session.execute(select(models.User).filter_by(id=payload.id))
+    r = await session.execute(select(models.User).filter_by(id=u_id))
     u = r.scalar_one_or_none()
     if u is None:  # If not exists
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
@@ -431,13 +436,13 @@ async def update_user(payload: schema.UpdateUser,
     return schema.ExpandedUser(id=u.id, username=u.username, master_id=u.master_id, permissions=u.permissions)
 
 
-@router.delete("/users/interact_user", response_model=schema.Successful)
-async def delete_user(payload: schema.UserId,
+@router.delete("/users/user", response_model=schema.Successful)
+async def delete_user(u_id: int = Query(alias="id"),
                       session: AsyncSession = Depends(session_dep),
                       current_user: schema.User = Depends(auth.get_current_user)):
     """Request handler for deleting an existing user"""
     # Get user from DB
-    r = await session.execute(select(models.User).filter_by(id=payload.id))
+    r = await session.execute(select(models.User).filter_by(id=u_id))
     u = r.scalar_one_or_none()
     if u is None:  # If not exists
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")

@@ -48,7 +48,7 @@ class TestKeySession:  # pylint: disable=C0115
             "license_key": license_key,
             "fingerprint": rand_str(16)
         }
-        r = client.request('GET', '/check_license', json=p)
+        r = client.request('POST', '/check_license', json=p)
         assert r.status_code == 200
         return r.json()['session_id']
 
@@ -57,7 +57,7 @@ class TestKeySession:  # pylint: disable=C0115
             "license_key": rand_str(16),
             "fingerprint": rand_str(16)
         }
-        r = client.request('GET', '/check_license', json=p)
+        r = client.request('POST', '/check_license', json=p)
         assert r.status_code == 403
         assert not r.json()['success'] and 'error' in r.json().keys()
 
@@ -67,7 +67,7 @@ class TestKeySession:  # pylint: disable=C0115
             "license_key": key,
             "fingerprint": rand_str(16)
         }
-        r = client.request('GET', '/check_license', json=p)
+        r = client.request('POST', '/check_license', json=p)
         assert r.status_code == 200
         assert r.json()['success'] and r.json()['session_id']
 
@@ -128,11 +128,11 @@ class TestKeySession:  # pylint: disable=C0115
             "license_key": key,
             "fingerprint": rand_str(16)
         }
-        r = client.request('GET', '/check_license', json=p)
+        r = client.request('POST', '/check_license', json=p)
         assert r.status_code == 200
         client.request('POST', '/end_session', json={"session_id": r.json()["session_id"]})
         p['fingerprint'] = rand_str(16)
-        r = client.request('GET', '/check_license', json=p)
+        r = client.request('POST', '/check_license', json=p)
         assert r.status_code == 403
         assert r.json() == {'error': 'Installations limit exceeded', 'success': False}
 
@@ -144,9 +144,9 @@ class TestKeySession:  # pylint: disable=C0115
             "license_key": key,
             "fingerprint": rand_str(16)
         }
-        r = client.request('GET', '/check_license', json=p)
+        r = client.request('POST', '/check_license', json=p)
         assert r.status_code == 200
-        r = client.request('GET', '/check_license', json=p)
+        r = client.request('POST', '/check_license', json=p)
         assert r.status_code == 403
         assert r.json() == {'error': 'Sessions limit exceeded', 'success': False}
 
@@ -159,12 +159,12 @@ class TestKeySession:  # pylint: disable=C0115
             "license_key": key,
             "fingerprint": rand_str(16)
         }
-        r = client.request('GET', '/check_license', json=p)
+        r = client.request('POST', '/check_license', json=p)
         assert r.status_code == 200
         r = client.request('POST', '/end_session', json={"session_id": r.json()["session_id"]})
         assert r.status_code == 200
         time.sleep(sig_period)
-        r = client.request('GET', '/check_license', json=p)
+        r = client.request('POST', '/check_license', json=p)
         assert r.status_code == 403
         assert r.json() == {'error': 'License expired', 'success': False}
 
@@ -177,7 +177,7 @@ class TestKeySession:  # pylint: disable=C0115
             "license_key": key,
             "fingerprint": rand_str(16)
         }
-        r = client.request('GET', '/check_license', json=p)
+        r = client.request('POST', '/check_license', json=p)
         assert r.status_code == 200
         time.sleep(sig_period + 2)
         r = client.request('POST', '/keepalive', json={"session_id": r.json()['session_id']})

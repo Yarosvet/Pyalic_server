@@ -21,19 +21,19 @@ def _random_session_id(signature_id: int, signature_ends: int) -> str:
         [random.choice(ascii_letters + digits) for _ in range(32)])
 
 
-async def create_session(signature_id: int, signature_ends: int) -> str:
+async def create_session(signature_id: int, signature_ends: int | None) -> str:
     """
     Create licensing session
     :param signature_id: ID of Signature
     :param signature_ends: Timestamp when session must be ended because of signature expiration
     :return: Session ID
     """
-    session_id = _random_session_id(signature_id, signature_ends)
+    session_id = _random_session_id(signature_id, signature_ends or 0)
     while await redis.exists(session_id):
         # While current ID already exists, create different one
-        session_id = _random_session_id(signature_id, signature_ends)
+        session_id = _random_session_id(signature_id, signature_ends or 0)
     # Add session to redis
-    if signature_ends - config.SESSION_ALIVE_PERIOD > datetime.now().timestamp():
+    if signature_ends is None or signature_ends - config.SESSION_ALIVE_PERIOD > datetime.now().timestamp():
         # Signature doesn't expire end before session should expire
         await redis.set(session_id, 1, ex=config.SESSION_ALIVE_PERIOD)
     else:
@@ -51,7 +51,9 @@ async def keep_alive(session_id: str):
     if not await redis.exists(session_id):
         raise SessionNotFoundException
     signature_ends = int(session_id.split(":")[1])
-    if signature_ends - config.SESSION_ALIVE_PERIOD > datetime.now().timestamp():
+    if signature_ends == 0:
+        signature_ends = None
+    if signature_ends is None or signature_ends - config.SESSION_ALIVE_PERIOD > datetime.now().timestamp():
         # Signature doesn't expire end before session should expire
         await redis.set(session_id, 1, ex=config.SESSION_ALIVE_PERIOD)
     else:

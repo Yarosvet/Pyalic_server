@@ -16,7 +16,7 @@ from ..loggers import logger
 router = APIRouter()
 
 
-@router.get("/check_license")
+@router.post("/check_license")
 async def check_license(payload: schema.CheckLicense, session: AsyncSession = Depends(session_dep)):
     """Request handler for checking license and creating a new Session with ID"""
     # Process check request via licensing engine

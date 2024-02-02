@@ -25,9 +25,9 @@ class UnspecifiedModel(BaseModel):
 
 class ShortProduct(BaseModel):
     name: str
-    sig_install_limit: int | None
-    sig_sessions_limit: int | None
-    sig_period: int | None
+    sig_install_limit: int | None = None
+    sig_sessions_limit: int | None = None
+    sig_period: int | None = None
 
 
 class AddProduct(ShortProduct):
@@ -35,7 +35,6 @@ class AddProduct(ShortProduct):
 
 
 class UpdateProduct(UnspecifiedModel):
-    id: int
     name: str = None
     sig_install_limit: int | None = None
     sig_sessions_limit: int | None = None
@@ -52,10 +51,6 @@ class GetProduct(ShortProduct):
 class ListedProduct(ShortProduct):
     id: int
     signatures: int
-
-
-class IdField(BaseModel):
-    id: int
 
 
 class Successful(BaseModel):
@@ -89,21 +84,9 @@ class AddSignature(BaseModel):
 
 
 class UpdateSignature(UnspecifiedModel):
-    id: int
     comment: str = None
     license_key: str = None
     additional_content: str = None
-
-
-class ProductsLimitOffset(BaseModel):
-    limit: int = 100
-    offset: int = 0
-
-
-class SignaturesLimitOffset(BaseModel):
-    product_id: int
-    limit: int = 100
-    offset: int = 0
 
 
 class ListSignatures(BaseModel):
@@ -142,11 +125,8 @@ class TokenData(BaseModel):
     username: str | None = None
 
 
-class UserId(BaseModel):
+class User(BaseModel):
     id: int
-
-
-class User(UserId):
     username: str
 
 
@@ -163,11 +143,6 @@ class ListUsers(BaseModel):
     items: int
 
 
-class UsersLimitOffset(BaseModel):
-    limit: int = 100
-    offset: int = 0
-
-
 class AddUser(BaseModel):
     username: str
     password: str
@@ -175,7 +150,6 @@ class AddUser(BaseModel):
 
 
 class UpdateUser(UnspecifiedModel):
-    id: int
     username: str = None
     permissions: str = None
     password: str = None

@@ -10,6 +10,8 @@ from ..app.db import models
 from . import rand_str, create_db_session
 
 
+# pylint: disable=duplicate-code
+
 @dataclass
 class RandProduct:  # pylint: disable=missing-class-docstring
     id: int
@@ -53,7 +55,7 @@ class TestProductsOperations:
             "limit": 100,
             "offset": 0
         }
-        r = client.request('GET', '/admin/list_products', json=p, headers=auth)
+        r = client.request('GET', '/admin/list_products', params=p, headers=auth)
         assert r.status_code == 200
         assert r.json()['items'] == len(r.json()['products']) == 0
 
@@ -63,7 +65,7 @@ class TestProductsOperations:
             "limit": 100,
             "offset": 0
         }
-        r = client.request('GET', '/admin/list_products', json=p, headers=auth)
+        r = client.request('GET', '/admin/list_products', params=p, headers=auth)
         assert r.status_code == 200
         assert r.json()['items'] == len(r.json()['products']) == 1
 
@@ -80,7 +82,7 @@ class TestProductsOperations:
             "sig_period": s_period,
             "additional_content": a_content
         }
-        r = client.request('POST', '/admin/interact_product', json=p, headers=auth)
+        r = client.request('POST', '/admin/product', json=p, headers=auth)
         assert r.status_code == 200
         j = r.json()
         assert j['name'] == name
@@ -94,7 +96,7 @@ class TestProductsOperations:
         p = {
             "name": name
         }
-        r = client.request('POST', '/admin/interact_product', json=p, headers=auth)
+        r = client.request('POST', '/admin/product', json=p, headers=auth)
         assert r.status_code == 200
         j = r.json()
         assert j['name'] == name
@@ -108,7 +110,7 @@ class TestProductsOperations:
         p = {
             "name": product_name
         }
-        r = client.request('POST', '/admin/interact_product', json=p, headers=auth)
+        r = client.request('POST', '/admin/product', json=p, headers=auth)
         assert r.status_code == 400 and r.json() == {'detail': 'Product with specified name already exists'}
 
     def test_update_product_full_fields(self, client, auth):
@@ -119,14 +121,13 @@ class TestProductsOperations:
         s_period = 60
         a_content = rand_str(32)
         p = {
-            "id": product_id,
             "name": name,
             "sig_install_limit": i_limit,
             "sig_sessions_limit": s_limit,
             "sig_period": s_period,
             "additional_content": a_content
         }
-        r = client.request('PUT', '/admin/interact_product', json=p, headers=auth)
+        r = client.request('PUT', '/admin/product', json=p, params={'id': product_id}, headers=auth)
         assert r.status_code == 200
         j = r.json()
         assert j['name'] == name
@@ -139,10 +140,9 @@ class TestProductsOperations:
         product_id = _create_rand_product().id
         name = rand_str(16)
         p = {
-            "id": product_id,
             "name": name
         }
-        r = client.request('PUT', '/admin/interact_product', json=p, headers=auth)
+        r = client.request('PUT', '/admin/product', json=p, params={'id': product_id}, headers=auth)
         j = r.json()
         assert r.status_code == 200
         assert j['name'] == name
@@ -153,7 +153,6 @@ class TestProductsOperations:
         product_id2 = _create_rand_product().id
         product_id3 = _create_rand_product().id
         p1 = {
-            "id": product_id1,
             "name": rand_str(16),
             "sig_install_limit": 2,
             "sig_sessions_limit": 3,
@@ -161,24 +160,22 @@ class TestProductsOperations:
             "additional_content": rand_str(32)
         }
         p2 = {
-            "id": product_id2,
             "name": rand_str(16)
         }
         p3 = {
-            "id": product_id3,
             "name": rand_str(16),
             "sig_install_limit": 2,
             "sig_sessions_limit": 3,
             "sig_period": 60,
             "additional_content": rand_str(32)
         }
-        r = client.request('PUT', '/admin/interact_product', json=p1, headers=auth)
+        r = client.request('PUT', '/admin/product', json=p1, params={'id': product_id1}, headers=auth)
         assert r.status_code == 200
         j1 = r.json()
-        r = client.request('PUT', '/admin/interact_product', json=p2, headers=auth)
+        r = client.request('PUT', '/admin/product', json=p2, params={'id': product_id2}, headers=auth)
         assert r.status_code == 200
         j2 = r.json()
-        r = client.request('PUT', '/admin/interact_product', json=p3, headers=auth)
+        r = client.request('PUT', '/admin/product', json=p3, params={'id': product_id3}, headers=auth)
         assert r.status_code == 200
         j3 = r.json()
         assert j1['sig_install_limit'] != j2['sig_install_limit'] != j3['sig_install_limit']
@@ -190,17 +187,16 @@ class TestProductsOperations:
         product_id = _create_rand_product().id
         another_product_name = _create_rand_product().name
         p = {
-            "id": product_id,
             "name": another_product_name
         }
-        r = client.request('PUT', '/admin/interact_product', json=p, headers=auth)
+        r = client.request('PUT', '/admin/product', json=p, params={'id': product_id}, headers=auth)
         assert r.status_code == 400 and r.json() == {'detail': 'Product with specified name already exists'}
 
     def test_get_product_not_exists(self, client, auth):
         p = {
             "id": 0
         }
-        r = client.request('GET', '/admin/interact_product', json=p, headers=auth)
+        r = client.request('GET', '/admin/product', params=p, headers=auth)
         assert r.status_code == 404 and r.json() == {'detail': 'Product not found'}
 
     def test_get_product(self, client, auth):
@@ -208,7 +204,7 @@ class TestProductsOperations:
         p = {
             "id": product_id
         }
-        r = client.request('GET', '/admin/interact_product', json=p, headers=auth)
+        r = client.request('GET', '/admin/product', params=p, headers=auth)
         assert r.status_code == 200 and r.json()['id'] == product_id
 
     def test_delete_product(self, client, auth):
@@ -216,14 +212,14 @@ class TestProductsOperations:
         p = {
             "id": product_id
         }
-        r = client.request('DELETE', '/admin/interact_product', json=p, headers=auth)
+        r = client.request('DELETE', '/admin/product', params=p, headers=auth)
         assert r.status_code == 200 and r.json() == {'success': True}
 
     def test_delete_product_not_exists(self, client, auth):
         p = {
             "id": 0
         }
-        r = client.request('DELETE', '/admin/interact_product', json=p, headers=auth)
+        r = client.request('DELETE', '/admin/product', params=p, headers=auth)
         assert r.status_code == 404 and r.json() == {'detail': 'Product not found'}
 
     def test_delete_product_with_signatures(self, client, auth):
@@ -232,7 +228,7 @@ class TestProductsOperations:
         p = {
             "id": product_id
         }
-        r = client.request('DELETE', '/admin/interact_product', json=p, headers=auth)
+        r = client.request('DELETE', '/admin/product', params=p, headers=auth)
         assert r.status_code == 200 and r.json() == {'success': True}
 
 
@@ -244,11 +240,9 @@ class TestSignaturesOperations:
     def test_empty_list_signatures(self, client, auth):
         product_id = _create_rand_product().id
         p = {
-            "product_id": product_id,
-            "limit": 100,
-            "offset": 0
+            "product_id": product_id
         }
-        r = client.request('GET', '/admin/list_signatures', json=p, headers=auth)
+        r = client.request('GET', '/admin/list_signatures', params=p, headers=auth)
         assert r.status_code == 200
         assert r.json()['items'] == len(r.json()['signatures']) == 0
         assert r.json()['product_id'] == product_id
@@ -261,7 +255,7 @@ class TestSignaturesOperations:
             "limit": 100,
             "offset": 0
         }
-        r = client.request('GET', '/admin/list_signatures', json=p, headers=auth)
+        r = client.request('GET', '/admin/list_signatures', params=p, headers=auth)
         assert r.status_code == 200
         assert r.json()['items'] == len(r.json()['signatures']) == 1
         assert r.json()['product_id'] == product_id
@@ -271,7 +265,7 @@ class TestSignaturesOperations:
             "product_id": 0,
             "license_key": rand_str(32)
         }
-        r = client.request('POST', '/admin/interact_signature', json=p, headers=auth)
+        r = client.request('POST', '/admin/signature', json=p, headers=auth)
         assert r.status_code == 404 and r.json() == {'detail': 'Product not found'}
 
     def test_add_signature_only_fields(self, client, auth):
@@ -281,7 +275,7 @@ class TestSignaturesOperations:
             "product_id": product_id,
             "license_key": key
         }
-        r = client.request('POST', '/admin/interact_signature', json=p, headers=auth)
+        r = client.request('POST', '/admin/signature', json=p, headers=auth)
         assert r.status_code == 200
         j = r.json()
         assert j['product_id'] == product_id
@@ -303,7 +297,7 @@ class TestSignaturesOperations:
             "additional_content": a_content,
             "activate": False
         }
-        r = client.request('POST', '/admin/interact_signature', json=p, headers=auth)
+        r = client.request('POST', '/admin/signature', json=p, headers=auth)
         assert r.status_code == 200
         j = r.json()
         assert j['product_id'] == product_id
@@ -320,7 +314,7 @@ class TestSignaturesOperations:
             "license_key": rand_str(32),
             "activate": True
         }
-        r = client.request('POST', '/admin/interact_signature', json=p, headers=auth)
+        r = client.request('POST', '/admin/signature', json=p, headers=auth)
         assert r.status_code == 200
         assert r.json()['activation_date'] is not None
 
@@ -332,15 +326,14 @@ class TestSignaturesOperations:
             "product_id": product_id,
             "license_key": key
         }
-        r = client.request('POST', '/admin/interact_signature', json=p, headers=auth)
+        r = client.request('POST', '/admin/signature', json=p, headers=auth)
         assert r.status_code == 400 and r.json() == {'detail': 'Signature with specified license key already exists'}
 
     def test_update_signature_not_exists(self, client, auth):
         p = {
-            "id": 0,
             "license_key": rand_str(32),
         }
-        r = client.request('PUT', '/admin/interact_signature', json=p, headers=auth)
+        r = client.request('PUT', '/admin/signature', json=p, params={'id': 0}, headers=auth)
         assert r.status_code == 404 and r.json() == {'detail': 'Signature not found'}
 
     def test_update_signature_full_fields(self, client, auth):
@@ -349,12 +342,11 @@ class TestSignaturesOperations:
         comment = rand_str(16)
         a_content = rand_str(32)
         p = {
-            "id": signature_id,
             "license_key": key,
             "comment": comment,
             "additional_content": a_content
         }
-        r = client.request('PUT', '/admin/interact_signature', json=p, headers=auth)
+        r = client.request('PUT', '/admin/signature', json=p, params={'id': signature_id}, headers=auth)
         assert r.status_code == 200
         j = r.json()
         assert j['comment'] == comment
@@ -365,10 +357,9 @@ class TestSignaturesOperations:
         signature_id = _create_rand_signature()
         key = rand_str(32)
         p = {
-            "id": signature_id,
             "license_key": key
         }
-        r = client.request('PUT', '/admin/interact_signature', json=p, headers=auth)
+        r = client.request('PUT', '/admin/signature', json=p, params={'id': signature_id}, headers=auth)
         assert r.status_code == 200
         assert r.json()['license_key'] == key
 
@@ -378,10 +369,9 @@ class TestSignaturesOperations:
         other_key = rand_str(32)
         _create_rand_signature(license_key=other_key)
         p = {
-            "id": signature_id,
             "license_key": other_key
         }
-        r = client.request('PUT', '/admin/interact_signature', json=p, headers=auth)
+        r = client.request('PUT', '/admin/signature', json=p, params={'id': signature_id}, headers=auth)
         assert r.status_code == 400 and r.json() == {'detail': 'Signature with specified license key already exists'}
 
     def test_get_signature(self, client, auth):
@@ -389,14 +379,14 @@ class TestSignaturesOperations:
         p = {
             "id": signature_id
         }
-        r = client.request('GET', '/admin/interact_signature', json=p, headers=auth)
+        r = client.request('GET', '/admin/signature', params=p, headers=auth)
         assert r.status_code == 200 and r.json()['id'] == signature_id
 
     def test_get_signature_not_exists(self, client, auth):
         p = {
             "id": 0
         }
-        r = client.request('GET', '/admin/interact_signature', json=p, headers=auth)
+        r = client.request('GET', '/admin/signature', params=p, headers=auth)
         assert r.status_code == 404 and r.json() == {'detail': 'Signature not found'}
 
     def test_delete_signature(self, client, auth):
@@ -404,14 +394,14 @@ class TestSignaturesOperations:
         p = {
             "id": signature_id
         }
-        r = client.request('DELETE', '/admin/interact_signature', json=p, headers=auth)
+        r = client.request('DELETE', '/admin/signature', params=p, headers=auth)
         assert r.status_code == 200 and r.json() == {'success': True}
 
     def test_delete_signature_not_exists(self, client, auth):
         p = {
             "id": 0
         }
-        r = client.request('DELETE', '/admin/interact_signature', json=p, headers=auth)
+        r = client.request('DELETE', '/admin/signature', params=p, headers=auth)
         assert r.status_code == 404 and r.json() == {'detail': 'Signature not found'}
 
     def test_delete_signature_with_installations(self, client, auth):
@@ -423,5 +413,5 @@ class TestSignaturesOperations:
         p = {
             "id": signature_id
         }
-        r = client.request('DELETE', '/admin/interact_signature', json=p, headers=auth)
+        r = client.request('DELETE', '/admin/signature', params=p, headers=auth)
         assert r.status_code == 200 and r.json() == {'success': True}

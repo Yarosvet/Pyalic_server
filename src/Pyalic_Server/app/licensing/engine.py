@@ -58,6 +58,7 @@ async def process_check_request(license_key: str, fingerprint: str, session: Asy
         session.add(current_inst)
         await session.commit()
     # Start a new session for this signature
-    sig_ends = (sig.product.sig_period + sig.activation_date).timestamp() if sig.product.sig_period is not None else 0
-    session_id = await create_session(sig.id, signature_ends=int(sig_ends))
+    sig_ends = int((sig.product.sig_period + sig.activation_date).timestamp()) \
+        if sig.product.sig_period is not None else None
+    session_id = await create_session(sig.id, signature_ends=sig_ends)
     return CheckLicenseResponse(success=True, session_id=session_id)
