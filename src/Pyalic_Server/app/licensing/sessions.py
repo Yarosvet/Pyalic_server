@@ -3,6 +3,7 @@ Sessions mechanics
 """
 import random
 from string import ascii_letters, digits
+from datetime import datetime
 
 from . import redis
 from .. import config
@@ -32,7 +33,12 @@ async def create_session(signature_id: int, signature_ends: int) -> str:
         # While current ID already exists, create different one
         session_id = _random_session_id(signature_id, signature_ends)
     # Add session to redis
-    await redis.set(session_id, 1, ex=config.SESSION_ALIVE_PERIOD)
+    if signature_ends - config.SESSION_ALIVE_PERIOD > datetime.now().timestamp():
+        # Signature doesn't expire end before session should expire
+        await redis.set(session_id, 1, ex=config.SESSION_ALIVE_PERIOD)
+    else:
+        # Signature must be expired with session
+        await redis.set(session_id, 1, exat=signature_ends)
     await logger.info(f"Created new session {session_id}")
     return session_id
 
@@ -44,7 +50,13 @@ async def keep_alive(session_id: str):
     """
     if not await redis.exists(session_id):
         raise SessionNotFoundException
-    await redis.set(session_id, 1, ex=config.SESSION_ALIVE_PERIOD)
+    signature_ends = int(session_id.split(":")[1])
+    if signature_ends - config.SESSION_ALIVE_PERIOD > datetime.now().timestamp():
+        # Signature doesn't expire end before session should expire
+        await redis.set(session_id, 1, ex=config.SESSION_ALIVE_PERIOD)
+    else:
+        # Signature must be expired with session
+        await redis.set(session_id, 1, exat=signature_ends)
 
 
 async def end_session(session_id: str):

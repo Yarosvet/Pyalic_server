@@ -4,7 +4,7 @@ Tests for FastAPI application
 
 import string
 import random
-from sqlalchemy import orm
+from sqlalchemy import orm, text
 from sqlalchemy.ext.serializer import dumps, loads
 from sqlalchemy import create_engine
 
@@ -32,11 +32,11 @@ def save_db_state():
     with create_db_session() as session:
         for mapper in db.SqlAlchemyBase.registry.mappers:
             db_dump_tables.add(dumps(session.query(mapper.class_).all()))
-        q = (i[0] for i in session.execute(
+        q = (i[0] for i in session.execute(text(
             "SELECT sequence_name FROM information_schema.sequences;"
-        ).all())
+        )).all())
         for seq_name in q:
-            current_val = session.execute(f"SELECT nextval('{seq_name}')-1;").scalar()
+            current_val = session.execute(text(f"SELECT nextval('{seq_name}')-1;")).scalar()
             if current_val != 0:
                 db_dump_sequences[seq_name] = current_val
 
@@ -51,13 +51,13 @@ def load_db_state():
             for obj in restored:
                 session.merge(obj)
             session.commit()
-        q = (i[0] for i in session.execute(
+        q = (i[0] for i in session.execute(text(
             "SELECT sequence_name FROM information_schema.sequences;"
-        ).all())
+        )).all())
         for seq_name in q:
             if seq_name in db_dump_sequences:
                 current_value = db_dump_sequences[seq_name]
-                session.execute(f"SELECT setval('{seq_name}', {current_value});")
+                session.execute(text(f"SELECT setval('{seq_name}', {current_value});"))
 
 
 def clean_db():

@@ -15,7 +15,7 @@ class UnspecifiedModel(BaseModel):
     def __init__(self, **data: Any):
         super().__init__(**data)
         unspecified = set()
-        for field in self.__fields__:
+        for field in self.model_fields:
             if field not in data:
                 unspecified.add(field)
         object.__setattr__(self, 'unspecified_fields', unspecified)
@@ -118,12 +118,12 @@ class CheckLicense(BaseModel):
 
 
 class BadLicense(BaseModel):
-    success = False
+    success: bool = False
     error: str
 
 
 class GoodLicense(BaseModel):
-    success = True
+    success: bool = True
     session_id: str
     additional_content_signature: str
     additional_content_product: str

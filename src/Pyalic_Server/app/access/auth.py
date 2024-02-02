@@ -9,7 +9,7 @@ from sqlalchemy.future import select
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
-from ..db import models, create_session
+from ..db import models, session_dep
 from ..config import SECRET_KEY
 from ..schema import TokenData, User
 
@@ -73,7 +73,7 @@ async def authenticate_user(username: str, password: str, session: AsyncSession)
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme),
-                           session: AsyncSession = Depends(create_session)) -> User:
+                           session: AsyncSession = Depends(session_dep)) -> User:
     """
     Dependency checking if the user is authenticated and getting his scheme
     :return: `User` scheme

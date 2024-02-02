@@ -9,7 +9,7 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
 from .. import schema, config
-from ..db import create_session, models
+from ..db import session_dep, models
 from ..loggers import logger
 from ..access import auth
 
@@ -37,7 +37,7 @@ async def _get_user(current_user: schema.User, session: AsyncSession) -> models.
 
 @router.get("/interact_product", response_model=schema.GetProduct)
 async def get_product(payload: schema.IdField,
-                      session: AsyncSession = Depends(create_session),
+                      session: AsyncSession = Depends(session_dep),
                       current_user: schema.User = Depends(auth.get_current_user)):
     """Request handler for getting product"""
     # Get product from DB
@@ -59,7 +59,7 @@ async def get_product(payload: schema.IdField,
 
 @router.post("/interact_product", response_model=schema.GetProduct)
 async def add_product(payload: schema.AddProduct,
-                      session: AsyncSession = Depends(create_session),
+                      session: AsyncSession = Depends(session_dep),
                       current_user: schema.User = Depends(auth.get_current_user)):
     """Request handler for adding product"""
     # Check if product with specified name already exists
@@ -93,7 +93,7 @@ async def add_product(payload: schema.AddProduct,
 
 @router.put("/interact_product", response_model=schema.GetProduct)
 async def update_product(payload: schema.UpdateProduct,
-                         session: AsyncSession = Depends(create_session),
+                         session: AsyncSession = Depends(session_dep),
                          current_user: schema.User = Depends(auth.get_current_user)):
     """Request handler for updating existing product"""
     # Get product
@@ -134,7 +134,7 @@ async def update_product(payload: schema.UpdateProduct,
 
 @router.delete("/interact_product", response_model=schema.Successful)
 async def delete_product(payload: schema.IdField,
-                         session: AsyncSession = Depends(create_session),
+                         session: AsyncSession = Depends(session_dep),
                          current_user: schema.User = Depends(auth.get_current_user)):
     """Request handler for deleting existing product"""
     # Get product with all relations
@@ -163,7 +163,7 @@ async def delete_product(payload: schema.IdField,
 
 
 @router.get("/list_products", response_model=schema.ListProducts)
-async def list_products(payload: schema.ProductsLimitOffset, session: AsyncSession = Depends(create_session)):
+async def list_products(payload: schema.ProductsLimitOffset, session: AsyncSession = Depends(session_dep)):
     """Request handler for getting list of all products"""
     # Get all products from DB
     r = await session.execute(
@@ -181,7 +181,7 @@ async def list_products(payload: schema.ProductsLimitOffset, session: AsyncSessi
 
 @router.get("/list_signatures", response_model=schema.ListSignatures)
 async def list_signatures(payload: schema.SignaturesLimitOffset,
-                          session: AsyncSession = Depends(create_session),
+                          session: AsyncSession = Depends(session_dep),
                           current_user: schema.User = Depends(auth.get_current_user)):
     """Request handler for getting list of signatures of specified product"""
     # Get product from DB
@@ -205,7 +205,7 @@ async def list_signatures(payload: schema.SignaturesLimitOffset,
 
 @router.get("/interact_signature", response_model=schema.GetSignature)
 async def get_signature(payload: schema.IdField,
-                        session: AsyncSession = Depends(create_session),
+                        session: AsyncSession = Depends(session_dep),
                         current_user: schema.User = Depends(auth.get_current_user)):
     """Request handler for getting signature info"""
     # Get signature from DB
@@ -228,7 +228,7 @@ async def get_signature(payload: schema.IdField,
 
 @router.post("/interact_signature", response_model=schema.GetSignature)
 async def add_signature(payload: schema.AddSignature,
-                        session: AsyncSession = Depends(create_session),
+                        session: AsyncSession = Depends(session_dep),
                         current_user: schema.User = Depends(auth.get_current_user)):
     """Request handler for adding new signature of specified product"""
     # Check if there's a signature with the same license key
@@ -261,7 +261,7 @@ async def add_signature(payload: schema.AddSignature,
 
 @router.put("/interact_signature", response_model=schema.GetSignature)
 async def update_signature(payload: schema.UpdateSignature,
-                           session: AsyncSession = Depends(create_session),
+                           session: AsyncSession = Depends(session_dep),
                            current_user: schema.User = Depends(auth.get_current_user)):
     """Request handler for updating an existing signature"""
     # Get signature from db
@@ -300,7 +300,7 @@ async def update_signature(payload: schema.UpdateSignature,
 
 @router.delete("/interact_signature", response_model=schema.Successful)
 async def delete_signature(payload: schema.IdField,
-                           session: AsyncSession = Depends(create_session),
+                           session: AsyncSession = Depends(session_dep),
                            current_user: schema.User = Depends(auth.get_current_user)):
     """Request handler for deleting an existing signature"""
     # Get signature form DB
@@ -329,7 +329,7 @@ async def delete_signature(payload: schema.IdField,
 
 @public_router.post("/token", response_model=schema.Token)
 async def login_for_access_token(form_data: security.OAuth2PasswordRequestForm = Depends(),
-                                 session: AsyncSession = Depends(create_session)):
+                                 session: AsyncSession = Depends(session_dep)):
     """Authorization request handler for getting JWT token"""
     user = await auth.authenticate_user(form_data.username, form_data.password, session)
     if not user:  # If authentication failed
@@ -353,7 +353,7 @@ async def users_me(current_user: schema.User = Depends(auth.get_current_user)):
 
 
 @router.get("/users/list", response_model=schema.ListUsers)
-async def list_users(payload: schema.UsersLimitOffset, session: AsyncSession = Depends(create_session)):
+async def list_users(payload: schema.UsersLimitOffset, session: AsyncSession = Depends(session_dep)):
     """Request handler for getting list of all users"""
     r = await session.execute(select(models.User).order_by(models.User.id).offset(payload.offset).limit(payload.limit))
     users = []
@@ -365,7 +365,7 @@ async def list_users(payload: schema.UsersLimitOffset, session: AsyncSession = D
 
 @router.get("/users/interact_user", response_model=schema.ExpandedUser)
 async def get_user(payload: schema.UserId,
-                   session: AsyncSession = Depends(create_session)):
+                   session: AsyncSession = Depends(session_dep)):
     """Request handler for getting User by his ID"""
     # Get user from DB
     r = await session.execute(select(models.User).filter_by(id=payload.id))
@@ -377,7 +377,7 @@ async def get_user(payload: schema.UserId,
 
 @router.post("/users/interact_user", response_model=schema.ExpandedUser)
 async def add_user(payload: schema.AddUser,
-                   session: AsyncSession = Depends(create_session),
+                   session: AsyncSession = Depends(session_dep),
                    current_user: schema.User = Depends(auth.get_current_user)):
     """Request handler for adding new user with specified parameters"""
     # Check permission to perform this action
@@ -402,7 +402,7 @@ async def add_user(payload: schema.AddUser,
 
 @router.put("/users/interact_user", response_model=schema.ExpandedUser)
 async def update_user(payload: schema.UpdateUser,
-                      session: AsyncSession = Depends(create_session),
+                      session: AsyncSession = Depends(session_dep),
                       current_user: schema.User = Depends(auth.get_current_user)):
     """Request handler for updating an existing user"""
     # Get user form db
@@ -433,7 +433,7 @@ async def update_user(payload: schema.UpdateUser,
 
 @router.delete("/users/interact_user", response_model=schema.Successful)
 async def delete_user(payload: schema.UserId,
-                      session: AsyncSession = Depends(create_session),
+                      session: AsyncSession = Depends(session_dep),
                       current_user: schema.User = Depends(auth.get_current_user)):
     """Request handler for deleting an existing user"""
     # Get user from DB

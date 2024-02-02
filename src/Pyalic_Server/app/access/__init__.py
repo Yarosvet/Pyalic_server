@@ -16,12 +16,12 @@ async def create_default_user_if_not_exists():
     :return:
     """
     # Getting quantity of users in DB
-    session = await anext(create_session())
-    r = await session.execute(select(func.count()).select_from(models.User))
-    if r.scalar() == 0:  # If not exists
-        u = models.User(username=config.DEFAULT_USER,
-                        hashed_password=get_password_hash(config.DEFAULT_PASSWORD),
-                        permissions=SUPERUSER)
-        session.add(u)
-    await session.commit()
-    await session.close()
+    async with create_session() as session:  # noqa
+        r = await session.execute(select(func.count()).select_from(models.User))  # pylint: disable=not-callable
+        if r.scalar() == 0:  # If not exists
+            u = models.User(username=config.DEFAULT_USER,
+                            hashed_password=get_password_hash(config.DEFAULT_PASSWORD),
+                            permissions=SUPERUSER)
+            session.add(u)
+        await session.commit()
+        # await session.close()

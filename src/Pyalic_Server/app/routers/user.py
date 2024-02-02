@@ -10,14 +10,14 @@ from sqlalchemy.orm import selectinload
 from .. import schema
 from ..licensing import engine as lic_engine
 from ..licensing import sessions as lic_sessions
-from ..db import create_session, models
+from ..db import session_dep, models
 from ..loggers import logger
 
 router = APIRouter()
 
 
 @router.get("/check_license")
-async def check_license(payload: schema.CheckLicense, session: AsyncSession = Depends(create_session)):
+async def check_license(payload: schema.CheckLicense, session: AsyncSession = Depends(session_dep)):
     """Request handler for checking license and creating a new Session with ID"""
     # Process check request via licensing engine
     check_resp = await lic_engine.process_check_request(payload.license_key, payload.fingerprint, session)
@@ -33,7 +33,7 @@ async def check_license(payload: schema.CheckLicense, session: AsyncSession = De
     # If something went wrong
     await logger.warning(f"Access denied (key={payload.license_key}), message: {check_resp.error}")
     resp = schema.BadLicense(error=check_resp.error)
-    return JSONResponse(content=resp.dict(), status_code=403)
+    return JSONResponse(content=resp.model_dump(), status_code=403)
 
 
 @router.post("/keepalive", response_model=schema.Successful)
