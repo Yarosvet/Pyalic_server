@@ -6,7 +6,6 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from .routers import admin, user
-from .licensing import sessions as lic_sessions
 from . import loggers, db, config
 from .access import create_default_user_if_not_exists
 
