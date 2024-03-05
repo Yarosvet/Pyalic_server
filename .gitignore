@@ -1,3 +1,4 @@
 *.env
 lic_server.log*
 .tox
+venv/
