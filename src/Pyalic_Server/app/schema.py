@@ -100,11 +100,6 @@ class CheckLicense(BaseModel):
     fingerprint: str
 
 
-class BadLicense(BaseModel):
-    success: bool = False
-    error: str
-
-
 class GoodLicense(BaseModel):
     success: bool = True
     session_id: str

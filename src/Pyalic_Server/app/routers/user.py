@@ -2,7 +2,6 @@
 User's api for checking license and managing session
 """
 from fastapi import APIRouter, HTTPException, status, Depends
-from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
@@ -17,23 +16,27 @@ router = APIRouter()
 
 
 @router.post("/check_license")
-async def check_license(payload: schema.CheckLicense, session: AsyncSession = Depends(session_dep)):
+async def check_license(
+        payload: schema.CheckLicense,
+        session: AsyncSession = Depends(session_dep)
+) -> schema.GoodLicense:
     """Request handler for checking license and creating a new Session with ID"""
-    # Process check request via licensing engine
-    check_resp = await lic_engine.process_check_request(payload.license_key, payload.fingerprint, session)
-    if check_resp.success:  # If access granted
-        # Get signature
-        r = await session.execute(select(models.Signature).filter_by(license_key=payload.license_key).options(
-            selectinload(models.Signature.product)))
-        sig = r.scalar_one_or_none()
-        if sig is None:  # If signature not exists
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
-        return schema.GoodLicense(session_id=check_resp.session_id, additional_content_signature=sig.additional_content,
-                                  additional_content_product=sig.product.additional_content)
-    # If something went wrong
-    await logger.warning(f"Access denied (key={payload.license_key}), message: {check_resp.error}")
-    resp = schema.BadLicense(error=check_resp.error)
-    return JSONResponse(content=resp.model_dump(), status_code=403)
+    try:
+        # Process check request via licensing engine
+        session_id = await lic_engine.process_check_request(payload.license_key, payload.fingerprint, session)
+    except HTTPException as exc:
+        # If something went wrong, log it and reraise
+        await logger.warning(f"Access denied (key={payload.license_key}), message: {exc.detail}")
+        raise exc
+    # If access granted (No exceptions raised)
+    # Get signature
+    r = await session.execute(select(models.Signature).filter_by(license_key=payload.license_key).options(
+        selectinload(models.Signature.product)))
+    sig = r.scalar_one_or_none()
+    if sig is None:  # If signature not exists
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
+    return schema.GoodLicense(session_id=session_id, additional_content_signature=sig.additional_content,
+                              additional_content_product=sig.product.additional_content)
 
 
 @router.post("/keepalive", response_model=schema.Successful)

@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from ..app import config
 from ..app.db import models
+from ..app.licensing import exceptions as lic_exc
 
 from . import rand_str, create_db_session
 
@@ -58,8 +59,8 @@ class TestKeySession:  # pylint: disable=C0115
             "fingerprint": rand_str(16)
         }
         r = client.request('POST', '/check_license', json=p)
-        assert r.status_code == 403
-        assert not r.json()['success'] and 'error' in r.json().keys()
+        assert r.status_code == 400
+        assert r.json()['detail'] == lic_exc.InvalidKeyException().detail
 
     def test_valid_key(self, client):
         key = self.__create_rand_signature()[1]
@@ -133,8 +134,8 @@ class TestKeySession:  # pylint: disable=C0115
         client.request('POST', '/end_session', json={"session_id": r.json()["session_id"]})
         p['fingerprint'] = rand_str(16)
         r = client.request('POST', '/check_license', json=p)
-        assert r.status_code == 403
-        assert r.json() == {'error': 'Installations limit exceeded', 'success': False}
+        assert r.status_code == 400
+        assert r.json()['detail'] == lic_exc.InstallationsLimitException().detail
 
     def test_limit_sessions(self, client):
         """Test abusing sessions limit"""
@@ -147,8 +148,8 @@ class TestKeySession:  # pylint: disable=C0115
         r = client.request('POST', '/check_license', json=p)
         assert r.status_code == 200
         r = client.request('POST', '/check_license', json=p)
-        assert r.status_code == 403
-        assert r.json() == {'error': 'Sessions limit exceeded', 'success': False}
+        assert r.status_code == 400
+        assert r.json()['detail'] == lic_exc.SessionsLimitException().detail
 
     def test_signature_exp_after_activation(self, client):
         """Test the case when signature expires when session ended"""
@@ -165,8 +166,8 @@ class TestKeySession:  # pylint: disable=C0115
         assert r.status_code == 200
         time.sleep(sig_period)
         r = client.request('POST', '/check_license', json=p)
-        assert r.status_code == 403
-        assert r.json() == {'error': 'License expired', 'success': False}
+        assert r.status_code == 400
+        assert r.json()['detail'] == lic_exc.LicenseExpiredException().detail
 
     def test_signature_exp_while_session(self, client):
         """Test the case when signature expires while session is active"""
