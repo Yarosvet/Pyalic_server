@@ -36,8 +36,7 @@ def save_db_state():
             "SELECT sequence_name FROM information_schema.sequences;"
         )).all())
         for seq_name in q:
-            current_val = session.execute(text(f"SELECT nextval('{seq_name}')-1;")).scalar()
-            if current_val != 0:
+            if (current_val := session.execute(text(f"SELECT nextval('{seq_name}')-1;")).scalar()) != 0:
                 db_dump_sequences[seq_name] = current_val
 
 

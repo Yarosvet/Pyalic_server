@@ -43,8 +43,7 @@ async def get_product(p_id: int = Query(alias="id"),
     # Get product from DB
     r = await session.execute(select(models.Product).filter_by(id=p_id).options(
         selectinload(models.Product.signatures)))
-    p = r.scalar_one_or_none()
-    if p is None:  # If not exists
+    if (p := r.scalar_one_or_none()) is None:  # If not exists
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
     # Check permission to perform this action
     user_in_db = await _get_user_with_prod(current_user, session)
@@ -100,8 +99,7 @@ async def update_product(payload: schema.UpdateProduct,
     # Get product
     r = await session.execute(select(models.Product).filter_by(id=p_id).options(
         selectinload(models.Product.signatures)))
-    p = r.scalar_one_or_none()
-    if p is None:  # If not exists
+    if (p := r.scalar_one_or_none()) is None:  # If not exists
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
     # Check permission to perform this action
     user_in_db = await _get_user_with_prod(current_user, session)
@@ -141,8 +139,7 @@ async def delete_product(p_id: int = Query(alias="id"),
     # Get product with all relations
     r = await session.execute(select(models.Product).filter_by(id=p_id).options(
         selectinload(models.Product.signatures).selectinload(models.Signature.installations)))
-    p = r.scalar_one_or_none()
-    if p is None:  # If not exists
+    if (p := r.scalar_one_or_none()) is None:  # If not exists
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
     # Check permission to perform this action
     user_in_db = await _get_user_with_prod(current_user, session)
@@ -189,8 +186,7 @@ async def list_signatures(product_id: int,
     """Request handler for getting list of signatures of specified product"""
     # Get product from DB
     r = await session.execute(select(models.Product).filter_by(id=product_id))
-    p = r.scalar_one_or_none()
-    if p is None:  # If not exists
+    if (p := r.scalar_one_or_none()) is None:  # If not exists
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
     user_in_db = await _get_user_with_prod(current_user, session)
     # Check permission to perform this action
@@ -215,8 +211,7 @@ async def get_signature(s_id: int = Query(alias="id"),
     r = await session.execute(
         select(models.Signature).filter_by(id=s_id).options(
             selectinload(models.Signature.installations), selectinload(models.Signature.product)))
-    sig = r.scalar_one_or_none()
-    if sig is None:  # If not exists
+    if (sig := r.scalar_one_or_none()) is None:  # If not exists
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Signature not found")
     # Check permission to perform this action
     user_in_db = await _get_user_with_prod(current_user, session)
@@ -241,8 +236,7 @@ async def add_signature(payload: schema.AddSignature,
                             detail="Signature with specified license key already exists")
     # Get product from DB
     r = await session.execute(select(models.Product).filter_by(id=payload.product_id))
-    p = r.scalar_one_or_none()
-    if p is None:  # If not exists
+    if (p := r.scalar_one_or_none()) is None:  # If not exists
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
     # Check permission to perform this action
     user_in_db = await _get_user_with_prod(current_user, session)
@@ -272,8 +266,7 @@ async def update_signature(payload: schema.UpdateSignature,
     r = await session.execute(
         select(models.Signature).filter_by(id=s_id).options(
             selectinload(models.Signature.installations), selectinload(models.Signature.product)))
-    sig = r.scalar_one_or_none()
-    if sig is None:  # If not exists
+    if (sig := r.scalar_one_or_none()) is None:  # If not exists
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Signature not found")
     # Check permission to perform this action
     user_in_db = await _get_user_with_prod(current_user, session)
@@ -309,8 +302,7 @@ async def delete_signature(s_id: int = Query(alias="id"),
     """Request handler for deleting an existing signature"""
     # Get signature form DB
     r = await session.execute(select(models.Signature).filter_by(id=s_id))
-    sig = r.scalar_one_or_none()
-    if sig is None:  # If not exists
+    if (sig := r.scalar_one_or_none()) is None:  # If not exists
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Signature not found")
     # If exists, get it with relations
     r = await session.execute(select(models.Signature).filter_by(id=s_id)
@@ -335,8 +327,8 @@ async def delete_signature(s_id: int = Query(alias="id"),
 async def login_for_access_token(form_data: security.OAuth2PasswordRequestForm = Depends(),
                                  session: AsyncSession = Depends(session_dep)):
     """Authorization request handler for getting JWT token"""
-    user = await auth.authenticate_user(form_data.username, form_data.password, session)
-    if not user:  # If authentication failed
+    if not (user := await auth.authenticate_user(form_data.username, form_data.password, session)):
+        # If authentication failed
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
@@ -373,8 +365,7 @@ async def get_user(u_id: int = Query(alias="id"),
     """Request handler for getting User by his ID"""
     # Get user from DB
     r = await session.execute(select(models.User).filter_by(id=u_id))
-    u = r.scalar_one_or_none()
-    if u is None:  # If not exists
+    if (u := r.scalar_one_or_none()) is None:  # If not exists
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return schema.ExpandedUser(id=u.id, username=u.username, master_id=u.master_id, permissions=u.permissions)
 
@@ -412,8 +403,7 @@ async def update_user(payload: schema.UpdateUser,
     """Request handler for updating an existing user"""
     # Get user form db
     r = await session.execute(select(models.User).filter_by(id=u_id))
-    u = r.scalar_one_or_none()
-    if u is None:  # If not exists
+    if (u := r.scalar_one_or_none()) is None:  # If not exists
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     # Check permission to perform this action
     current_user_in_db = await _get_user(current_user, session)
@@ -443,8 +433,7 @@ async def delete_user(u_id: int = Query(alias="id"),
     """Request handler for deleting an existing user"""
     # Get user from DB
     r = await session.execute(select(models.User).filter_by(id=u_id))
-    u = r.scalar_one_or_none()
-    if u is None:  # If not exists
+    if (u := r.scalar_one_or_none()) is None:  # If not exists
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     # Check every field if it is filled (autofill mechanics)
     current_user_in_db = await _get_user(current_user, session)

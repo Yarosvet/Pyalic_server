@@ -64,8 +64,7 @@ async def authenticate_user(username: str, password: str, session: AsyncSession)
     """
     # Get user from DB
     r = await session.execute(select(models.User).filter_by(username=username))
-    user = r.scalar_one_or_none()
-    if not user:  # User doesn't exist
+    if not (user := r.scalar_one_or_none()):  # User doesn't exist
         return False
     if not check_password(password, user.hashed_password):  # Wrong password
         return False
@@ -80,15 +79,13 @@ async def get_current_user(token: str = Depends(oauth2_scheme),
     """
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])  # Decode payload
-        username: str = payload.get("sub")
-        if username is None:
+        if (username := payload.get("sub")) is None:
             raise CredentialsException
         token_data = TokenData(username=username)
     except JWTError as exc:  # Error while decoding
         raise CredentialsException from exc
     # Get user from DB
     r = await session.execute(select(models.User).filter_by(username=token_data.username))
-    user = r.scalar_one_or_none()
-    if user is None:  # If there's no such user, throw exception
+    if (user := r.scalar_one_or_none()) is None:  # If there's no such user, throw exception
         raise CredentialsException
     return User(username=user.username, id=user.id)

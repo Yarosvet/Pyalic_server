@@ -4,7 +4,7 @@ Here we got pytest fixtures set up
 import time
 import pytest
 from fastapi.testclient import TestClient
-from redis import Redis
+from redis import StrictRedis
 
 from ..app import config, app
 
@@ -23,11 +23,9 @@ def client() -> TestClient:
 
 
 @pytest.fixture(scope="function")
-def rebuild_db(redis_client):  # pylint: disable=W0621
+def rebuild_db(redis_client: StrictRedis):  # pylint: disable=W0621
     """
     Rebuild db with saved state
-    :param redis_client:
-    :return:
     """
     redis_client.flushall()
     clean_db()
@@ -40,7 +38,7 @@ def redis_client():
     """
     Safely get sync Redis client
     """
-    with Redis(config.REDIS_HOST, config.REDIS_PORT, config.REDIS_DB, config.REDIS_PASSWORD) as r:
+    with StrictRedis(config.REDIS_HOST, config.REDIS_PORT, config.REDIS_DB, config.REDIS_PASSWORD) as r:
         yield r
 
 

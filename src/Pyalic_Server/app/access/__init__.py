@@ -13,7 +13,6 @@ from .permissions import SUPERUSER
 async def create_default_user_if_not_exists():
     """
     Creates a user with default username and password if no any users exist
-    :return:
     """
     # Getting quantity of users in DB
     async with create_session() as session:  # noqa

@@ -1,7 +1,7 @@
 """
 Actions with Database
 """
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
@@ -14,7 +14,7 @@ ENGINE = None
 __FACTORY = None
 
 
-async def global_init(user, password, hostname, db_name):
+async def global_init(user: str, password: str, hostname: str, db_name: str):
     """
     Globally init ASYNC PostgreSQL DB
     :param user: User of DB

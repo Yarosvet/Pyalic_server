@@ -263,13 +263,13 @@ class TestUserPermissions:
 
     def test_manage_own_products_abuse(self, client, auth):  # pylint: disable=C0116
         self.__set_default_user_permissions("")
-        p = {
+        p_dict = {
             "name": "TestProductB",
             "sig_install_limit": 2,
             "sig_sessions_limit": 3,
             "sig_period": None
         }
-        r = client.request('POST', '/admin/product', json=p, headers=auth)
+        r = client.request('POST', '/admin/product', json=p_dict, headers=auth)
         assert r.status_code == 403
         with create_db_session() as session:
             u = session.query(models.User).filter_by(username=config.DEFAULT_USER).one_or_none()
@@ -278,12 +278,12 @@ class TestUserPermissions:
             session.add(p)
             session.commit()
             session.refresh(p)
-            p = {
+            p_dict = {
                 "product_id": p.id,
                 "offset": 0,
                 "limit": 100
             }
-        r = client.request('GET', '/admin/list_signatures', params=p, headers=auth)
+        r = client.request('GET', '/admin/list_signatures', params=p_dict, headers=auth)
         assert r.status_code == 403
 
     def test_manage_other_products_abuse(self, client, auth):  # pylint: disable=C0116

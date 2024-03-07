@@ -22,8 +22,7 @@ async def process_check_request(license_key: str, fingerprint: str, session: Asy
     # Get signature
     r = await session.execute(select(models.Signature).filter_by(license_key=license_key).options(
         selectinload(models.Signature.product), selectinload(models.Signature.installations)))
-    sig = r.scalar_one_or_none()
-    if sig is None:
+    if (sig := r.scalar_one_or_none()) is None:
         raise exceptions.InvalidKeyException()
     # Check license period
     current_period = datetime.utcnow() - sig.activation_date if sig.activation_date is not None else timedelta(

@@ -50,8 +50,7 @@ async def keep_alive(session_id: str):
     """
     if not await redis.exists(session_id):
         raise SessionNotFoundException
-    signature_ends = int(session_id.split(":")[1])
-    if signature_ends == 0:
+    if (signature_ends := int(session_id.split(":")[1])) == 0:
         signature_ends = None
     if signature_ends is None or signature_ends - config.SESSION_ALIVE_PERIOD > datetime.now().timestamp():
         # Signature doesn't expire end before session should expire

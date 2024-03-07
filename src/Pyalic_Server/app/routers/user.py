@@ -32,8 +32,7 @@ async def check_license(
     # Get signature
     r = await session.execute(select(models.Signature).filter_by(license_key=payload.license_key).options(
         selectinload(models.Signature.product)))
-    sig = r.scalar_one_or_none()
-    if sig is None:  # If signature not exists
+    if (sig := r.scalar_one_or_none()) is None:  # If signature not exists
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
     return schema.GoodLicense(session_id=session_id, additional_content_signature=sig.additional_content,
                               additional_content_product=sig.product.additional_content)
